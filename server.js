@@ -13,14 +13,16 @@ class CoffeePOSServer {
         this.app = express();
         this.port = process.env.PORT || 3000;
         
-        // n8n webhook URLs - UPDATE THESE WITH YOUR ACTUAL n8n WEBHOOK URLs
+        // n8n webhook URLs - UPDATE N8N_BASE_URL with your actual n8n instance URL
+        const n8nBaseUrl = process.env.N8N_BASE_URL || 'https://primary-production-3ef2.up.railway.app';
         this.n8nWebhooks = {
-            dataLoad: process.env.N8N_DATA_LOAD_WEBHOOK || 'https://your-n8n-instance.com/webhook/dataload',
-            processOrder: process.env.N8N_PROCESS_ORDER_WEBHOOK || 'https://your-n8n-instance.com/webhook/ordersubmit',
-            updateInventory: process.env.N8N_UPDATE_INVENTORY_WEBHOOK || 'https://your-n8n-instance.com/webhook/update-inventory',
-            getLowStock: process.env.N8N_LOW_STOCK_WEBHOOK || 'https://your-n8n-instance.com/webhook/low-stock',
-            getAnalytics: process.env.N8N_ANALYTICS_WEBHOOK || 'https://your-n8n-instance.com/webhook/analytics',
-            dashboardStats: process.env.N8N_DASHBOARD_WEBHOOK || 'https://your-n8n-instance.com/webhook/dashboard-stats'
+            getSettings: `${n8nBaseUrl}/webhook/get-settings`,
+            getProducts: `${n8nBaseUrl}/webhook/get-products`,
+            processOrder: `${n8nBaseUrl}/webhook/process-order`,
+            dashboardStats: `${n8nBaseUrl}/webhook/dashboard-stats`,
+            getLowStock: `${n8nBaseUrl}/webhook/low-stock`,
+            getAnalytics: `${n8nBaseUrl}/webhook/analytics`,
+            updateInventory: `${n8nBaseUrl}/webhook/update-inventory`
         };
         
         // Configuration
@@ -256,12 +258,12 @@ class CoffeePOSServer {
     async handleGetSettings(req, res) {
         try {
             // Call n8n webhook to get settings from Google Sheets
-            const response = await this.callN8NWebhook(this.n8nWebhooks.dataLoad, 'GET');
+            const response = await this.callN8NWebhook(this.n8nWebhooks.getSettings, 'GET');
             
-            if (response && response.success && response.data && response.data.settings) {
+            if (response && response.success && response.settings) {
                 return res.json({
                     success: true,
-                    settings: response.data.settings
+                    settings: response.settings
                 });
             }
             
@@ -296,13 +298,15 @@ class CoffeePOSServer {
     async handleGetProducts(req, res) {
         try {
             // Call n8n webhook to get products from Google Sheets
-            const response = await this.callN8NWebhook(this.n8nWebhooks.dataLoad, 'GET');
+            const response = await this.callN8NWebhook(this.n8nWebhooks.getProducts, 'GET');
             
-            if (response && response.success && response.data && response.data.products) {
+            if (response && response.success && response.products) {
                 return res.json({
                     success: true,
-                    products: response.data.products,
-                    lastUpdate: new Date().toISOString()
+                    products: response.products,
+                    lastUpdate: response.lastUpdate || new Date().toISOString(),
+                    totalProducts: response.totalProducts,
+                    activeProducts: response.activeProducts
                 });
             }
             
@@ -339,8 +343,12 @@ class CoffeePOSServer {
             if (response && response.success) {
                 return res.json({
                     success: true,
-                    order: response.order || orderData,
-                    message: 'Order processed successfully'
+                    orderId: response.orderId,
+                    total: response.total || orderData.total,
+                    message: response.message || 'Order processed successfully',
+                    lowStockAlert: response.lowStockAlert || false,
+                    lowStockCount: response.lowStockCount || 0,
+                    emailSent: response.emailSent || false
                 });
             }
             
@@ -589,9 +597,12 @@ class CoffeePOSServer {
    Shop: ${this.config.shopName}
 
 🔗 n8n Webhooks:
-   Data Load: ${this.n8nWebhooks.dataLoad}
+   Get Settings: ${this.n8nWebhooks.getSettings}
+   Get Products: ${this.n8nWebhooks.getProducts}
    Process Order: ${this.n8nWebhooks.processOrder}
-   Update Inventory: ${this.n8nWebhooks.updateInventory}
+   Dashboard Stats: ${this.n8nWebhooks.dashboardStats}
+   Low Stock: ${this.n8nWebhooks.getLowStock}
+   Analytics: ${this.n8nWebhooks.getAnalytics}
 
 🎯 Features Enabled:
    ✅ Authentication System

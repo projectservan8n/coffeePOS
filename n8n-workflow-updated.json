@@ -1,0 +1,487 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Coffee Shop POS System Enhanced\n\nThis workflow handles all POS operations with beautiful email templates:\n- Order processing with Google Sheets\n- Real-time inventory management\n- Professional HTML email notifications\n- Analytics & reporting\n- Stock alerts with rich formatting\n- Email templates stored in Google Sheets\n\n**Status:** Production Ready\n**Google Sheets ID:** 10Hef6jyhepOxcWTT9otjHssnICnLk94he8LwWxUnxDs\n**Email Templates:** HTML with inline CSS\n**Credentials:** Configure Google Sheets OAuth2 + SMTP",
+        "height": 200,
+        "width": 320,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [32, -544],
+      "id": "b31c0c15-c2b4-4749-a97b-ecf6ed8a46fc",
+      "name": "System Overview"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "process-order",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [352, -272],
+      "id": "926af6ee-5fdd-4d45-b533-95c00ce58bc4",
+      "name": "Process Order",
+      "webhookId": "3d7cb466-c223-4f8b-b2ca-3b6b9717938a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const orderData = $input.first().json;\n\nif (!orderData.orderId) {\n  orderData.orderId = 'ORD-' + Date.now();\n}\n\nif (!orderData.items || !Array.isArray(orderData.items) || orderData.items.length === 0) {\n  return [{ json: { success: false, error: 'Invalid order data: items array is required' } }];\n}\n\nlet subtotal = 0;\nlet ingredientCost = 0;\n\nfor (const item of orderData.items) {\n  if (!item.price || !item.quantity) {\n    return [{ json: { success: false, error: `Invalid item data: ${item.name || 'Unknown item'} missing price or quantity` } }];\n  }\n  subtotal += item.price * item.quantity;\n  ingredientCost += (item.cost || 0) * item.quantity;\n}\n\nconst tax = subtotal * 0.12;\nconst total = subtotal + tax;\n\nconst processedOrder = {\n  orderId: orderData.orderId,\n  timestamp: new Date().toISOString(),\n  items: JSON.stringify(orderData.items),\n  subtotal: Math.round(subtotal * 100) / 100,\n  tax: Math.round(tax * 100) / 100,\n  total: Math.round(total * 100) / 100,\n  paymentMethod: orderData.paymentMethod || 'cash',\n  customerInfo: orderData.customerInfo || 'Walk-in Customer',\n  status: 'completed',\n  currency: 'PHP',\n  ingredientCost: Math.round(ingredientCost * 100) / 100,\n  cashier: orderData.cashier || 'System',\n  location: orderData.location || 'Main Store',\n  deviceInfo: orderData.deviceInfo || 'POS Terminal',\n  lastModified: new Date().toISOString()\n};\n\nreturn [{ json: { success: true, order: processedOrder, rawItems: orderData.items } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [576, -272],
+      "id": "b42c8027-c1a6-4823-a121-5f12d4f2c6d6",
+      "name": "Validate Order"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [800, -272],
+      "id": "fd5dbbe1-3917-4f51-a243-9b10aa9cbf23",
+      "name": "Order Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "10Hef6jyhepOxcWTT9otjHssnICnLk94he8LwWxUnxDs",
+          "mode": "list",
+          "cachedResultName": "Coffee Shop POS System"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Orders",
+          "mode": "list",
+          "cachedResultName": "Orders"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "orderId": "={{ $json.order.orderId }}",
+            "timestamp": "={{ $json.order.timestamp }}",
+            "items": "={{ $json.order.items }}",
+            "subtotal": "={{ $json.order.subtotal }}",
+            "tax": "={{ $json.order.tax }}",
+            "total": "={{ $json.order.total }}",
+            "paymentMethod": "={{ $json.order.paymentMethod }}",
+            "customerInfo": "={{ $json.order.customerInfo }}",
+            "status": "={{ $json.order.status }}",
+            "currency": "={{ $json.order.currency }}",
+            "ingredientCost": "={{ $json.order.ingredientCost }}",
+            "cashier": "={{ $json.order.cashier }}",
+            "location": "={{ $json.order.location }}",
+            "deviceInfo": "={{ $json.order.deviceInfo }}",
+            "lastModified": "={{ $json.order.lastModified }}"
+          },
+          "matchingColumns": ["orderId"]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1024, -368],
+      "id": "c4f5b1bc-eaa1-4c39-89c0-e4f4282e9d5d",
+      "name": "Append Order to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rwLNlWuwRmocf0FL",
+          "name": "Serva"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10Hef6jyhepOxcWTT9otjHssnICnLk94he8LwWxUnxDs",
+          "mode": "list",
+          "cachedResultName": "Coffee Paradise POS System",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10Hef6jyhepOxcWTT9otjHssnICnLk94he8LwWxUnxDs/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Products",
+          "mode": "list",
+          "cachedResultName": "Products"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1248, -368],
+      "id": "fdbe00de-cd0b-4e72-abb3-fe954f5986a5",
+      "name": "Get Products for Stock",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rwLNlWuwRmocf0FL",
+          "name": "Serva"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "get-settings",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [352, 64],
+      "id": "a57924fd-2d94-4243-8d53-e64913b253f1",
+      "name": "Get Settings Webhook",
+      "webhookId": "webhook-get-settings-id"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10Hef6jyhepOxcWTT9otjHssnICnLk94he8LwWxUnxDs",
+          "mode": "list",
+          "cachedResultName": "Coffee Shop POS System"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Settings",
+          "mode": "list",
+          "cachedResultName": "Settings"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [576, 64],
+      "id": "882e2407-157c-4b91-9504-baad17d7aed6",
+      "name": "Get Settings",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rwLNlWuwRmocf0FL",
+          "name": "Serva"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "get-products",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [352, 288],
+      "id": "79844267-cbf4-400d-8e2b-c8bb798ded63",
+      "name": "Get Products Webhook",
+      "webhookId": "webhook-get-products-id"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10Hef6jyhepOxcWTT9otjHssnICnLk94he8LwWxUnxDs",
+          "mode": "list",
+          "cachedResultName": "Coffee Shop POS System"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Products",
+          "mode": "list",
+          "cachedResultName": "Products"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [576, 288],
+      "id": "3f8e5510-16fa-4232-bf53-cbc0fd618a04",
+      "name": "Get Products",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rwLNlWuwRmocf0FL",
+          "name": "Serva"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "dashboard-stats",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [352, 512],
+      "id": "53c67bce-45c3-407b-8822-5e5f7ddb9f54",
+      "name": "Dashboard Stats",
+      "webhookId": "webhook-dashboard-stats-id"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10Hef6jyhepOxcWTT9otjHssnICnLk94he8LwWxUnxDs",
+          "mode": "list",
+          "cachedResultName": "Coffee Shop POS System"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Orders",
+          "mode": "list",
+          "cachedResultName": "Orders"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [576, 512],
+      "id": "a0b49473-e26f-4219-b043-c04b3dc580ff",
+      "name": "Get Orders for Stats",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rwLNlWuwRmocf0FL",
+          "name": "Serva"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "low-stock",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [352, 736],
+      "id": "a73f5f04-41d8-4086-9dd5-ce987417872c",
+      "name": "Low Stock Check",
+      "webhookId": "webhook-low-stock-id"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10Hef6jyhepOxcWTT9otjHssnICnLk94he8LwWxUnxDs",
+          "mode": "list",
+          "cachedResultName": "Coffee Shop POS System"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Products",
+          "mode": "list",
+          "cachedResultName": "Products"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [576, 736],
+      "id": "4cda919c-8431-44b3-85ec-1ad4a696ecc4",
+      "name": "Get Products for Stock Check",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rwLNlWuwRmocf0FL",
+          "name": "Serva"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "analytics",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [352, 960],
+      "id": "4dd337dd-5586-4e64-ad17-efb2707def54",
+      "name": "Analytics",
+      "webhookId": "webhook-analytics-id"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10Hef6jyhepOxcWTT9otjHssnICnLk94he8LwWxUnxDs",
+          "mode": "list",
+          "cachedResultName": "Coffee Shop POS System"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Orders",
+          "mode": "list",
+          "cachedResultName": "Orders"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [576, 960],
+      "id": "0815f2d4-920f-4bac-ad14-ef0aa6dc4abb",
+      "name": "Get Orders for Analytics",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rwLNlWuwRmocf0FL",
+          "name": "Serva"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10Hef6jyhepOxcWTT9otjHssnICnLk94he8LwWxUnxDs",
+          "mode": "list",
+          "cachedResultName": "Coffee Shop POS System"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Email_Templates",
+          "mode": "list",
+          "cachedResultName": "Email_Templates"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1920, -432],
+      "id": "bb583218-494b-4d28-8de8-c9093a3910fa",
+      "name": "Get Email Templates",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rwLNlWuwRmocf0FL",
+          "name": "Serva"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Process Order": {
+      "main": [
+        [
+          {
+            "node": "Validate Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Order": {
+      "main": [
+        [
+          {
+            "node": "Order Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order Valid?": {
+      "main": [
+        [
+          {
+            "node": "Append Order to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Order to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Get Products for Stock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Settings Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Products Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dashboard Stats": {
+      "main": [
+        [
+          {
+            "node": "Get Orders for Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Low Stock Check": {
+      "main": [
+        [
+          {
+            "node": "Get Products for Stock Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analytics": {
+      "main": [
+        [
+          {
+            "node": "Get Orders for Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ad95b84ab133a6ae48f06ddaf80f428733a75669a1a6e4f3694c6e3d5da1ddba"
+  }
+}

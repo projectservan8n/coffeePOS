@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm start)",
+      "Bash(npm install)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(set PORT=3001)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\USER''''S\\Desktop\\COFEE POS"
+    ]
+  }
+}
