@@ -11,18 +11,16 @@ require('dotenv').config();
 class CoffeePOSServer {
     constructor() {
         this.app = express();
-        this.port = process.env.PORT || 3000;
+        this.port = process.env.PORT || process.env.RAILWAY_PORT || 3000;
         
-        // n8n webhook URLs - UPDATE N8N_BASE_URL with your actual n8n instance URL
-        const n8nBaseUrl = process.env.N8N_BASE_URL || 'https://primary-production-3ef2.up.railway.app';
+        // n8n webhook URLs - UPDATE THESE WITH YOUR ACTUAL n8n WEBHOOK URLs
         this.n8nWebhooks = {
-            getSettings: `${n8nBaseUrl}/webhook/get-settings`,
-            getProducts: `${n8nBaseUrl}/webhook/get-products`,
-            processOrder: `${n8nBaseUrl}/webhook/process-order`,
-            dashboardStats: `${n8nBaseUrl}/webhook/dashboard-stats`,
-            getLowStock: `${n8nBaseUrl}/webhook/low-stock`,
-            getAnalytics: `${n8nBaseUrl}/webhook/analytics`,
-            updateInventory: `${n8nBaseUrl}/webhook/update-inventory`
+            dataLoad: process.env.N8N_DATA_LOAD_WEBHOOK || 'https://your-n8n-instance.com/webhook/dataload',
+            processOrder: process.env.N8N_PROCESS_ORDER_WEBHOOK || 'https://your-n8n-instance.com/webhook/ordersubmit',
+            updateInventory: process.env.N8N_UPDATE_INVENTORY_WEBHOOK || 'https://your-n8n-instance.com/webhook/update-inventory',
+            getLowStock: process.env.N8N_LOW_STOCK_WEBHOOK || 'https://your-n8n-instance.com/webhook/low-stock',
+            getAnalytics: process.env.N8N_ANALYTICS_WEBHOOK || 'https://your-n8n-instance.com/webhook/analytics',
+            dashboardStats: process.env.N8N_DASHBOARD_WEBHOOK || 'https://your-n8n-instance.com/webhook/dashboard-stats'
         };
         
         // Configuration
@@ -192,13 +190,15 @@ class CoffeePOSServer {
 
     // Route handlers - NOW CALLING n8n WEBHOOKS
     handleHealthCheck(req, res) {
-        res.json({
+        res.status(200).json({
             success: true,
             status: 'healthy',
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
             environment: this.config.environment,
-            version: '1.0.0'
+            version: '1.0.0',
+            port: this.port,
+            ready: true
         });
     }
 
@@ -587,7 +587,7 @@ class CoffeePOSServer {
     }
 
     start() {
-        this.app.listen(this.port, () => {
+        const server = this.app.listen(this.port, '0.0.0.0', () => {
             console.log(`
 🚀 Coffee POS Server Started Successfully!
 
@@ -597,12 +597,9 @@ class CoffeePOSServer {
    Shop: ${this.config.shopName}
 
 🔗 n8n Webhooks:
-   Get Settings: ${this.n8nWebhooks.getSettings}
-   Get Products: ${this.n8nWebhooks.getProducts}
+   Data Load: ${this.n8nWebhooks.dataLoad}
    Process Order: ${this.n8nWebhooks.processOrder}
-   Dashboard Stats: ${this.n8nWebhooks.dashboardStats}
-   Low Stock: ${this.n8nWebhooks.getLowStock}
-   Analytics: ${this.n8nWebhooks.getAnalytics}
+   Update Inventory: ${this.n8nWebhooks.updateInventory}
 
 🎯 Features Enabled:
    ✅ Authentication System
@@ -614,12 +611,31 @@ class CoffeePOSServer {
 Ready to serve coffee! ☕️
             `);
         });
+
+        server.on('error', (err) => {
+            console.error('❌ Server failed to start:', err);
+            process.exit(1);
+        });
+
+        // Graceful shutdown
+        process.on('SIGTERM', () => {
+            console.log('👋 SIGTERM received, shutting down gracefully');
+            server.close(() => {
+                console.log('✅ Process terminated');
+                process.exit(0);
+            });
+        });
     }
 }
 
 // Start the server
 if (require.main === module) {
     try {
+        console.log('🚀 Initializing Coffee POS Server...');
+        console.log('Environment:', process.env.NODE_ENV || 'development');
+        console.log('Port from env:', process.env.PORT);
+        console.log('Railway Port from env:', process.env.RAILWAY_PORT);
+        
         global.server = new CoffeePOSServer();
         global.server.start();
     } catch (error) {
