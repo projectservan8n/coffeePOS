@@ -43,11 +43,11 @@ class CoffeePOSServer {
             contentSecurityPolicy: {
                 directives: {
                     defaultSrc: ["'self'"],
-                    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+                    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
                     fontSrc: ["'self'", "https://fonts.gstatic.com"],
-                    scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
+                    scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
                     imgSrc: ["'self'", "data:", "https:"],
-                    connectSrc: ["'self'"]
+                    connectSrc: ["'self'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://primary-production-3ef2.up.railway.app"]
                 }
             }
         }));

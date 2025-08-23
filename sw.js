@@ -6,9 +6,7 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/style.css',
-  '/script.js',
-  '/api/get-settings',
-  '/api/get-products'
+  '/script.js'
 ];
 
 // Install event - cache resources
@@ -27,6 +25,13 @@ self.addEventListener('install', (event) => {
 
 // Fetch event - serve cached content when offline
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // Skip cross-origin requests to avoid CSP issues
+  if (url.origin !== location.origin) {
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
