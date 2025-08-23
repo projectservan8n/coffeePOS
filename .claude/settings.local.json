@@ -5,7 +5,10 @@
       "Bash(npm install)",
       "Bash(curl:*)",
       "Bash(taskkill:*)",
-      "Bash(set PORT=3001)"
+      "Bash(set PORT=3001)",
+      "Bash(npm run build:*)",
+      "Bash(npm ci:*)",
+      "Bash(timeout 5 npm start)"
     ],
     "additionalDirectories": [
       "C:\\Users\\USER''''S\\Desktop\\COFEE POS"

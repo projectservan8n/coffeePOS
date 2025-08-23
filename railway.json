@@ -1,8 +1,7 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "npm ci --omit=dev"
+    "builder": "NIXPACKS"
   },
   "deploy": {
     "numReplicas": 1,
@@ -11,13 +10,5 @@
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "startCommand": "npm start"
-  },
-  "environments": {
-    "production": {
-      "variables": {
-        "NODE_ENV": "production",
-        "PORT": "${{RAILWAY_PORT}}"
-      }
-    }
   }
 }
