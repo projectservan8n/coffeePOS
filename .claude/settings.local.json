@@ -10,7 +10,8 @@
       "Bash(npm ci:*)",
       "Bash(timeout 5 npm start)",
       "Bash(npm install:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\USER''''S\\Desktop\\COFEE POS"
