@@ -53,6 +53,7 @@
     "index.html",
     "style.css",
     "script.js",
+    "sw.js",
     "railway.json",
     "README.md"
   ]
