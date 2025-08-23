@@ -13,14 +13,15 @@ class CoffeePOSServer {
         this.app = express();
         this.port = process.env.PORT || process.env.RAILWAY_PORT || 3000;
         
-        // n8n webhook URLs - UPDATE THESE WITH YOUR ACTUAL n8n WEBHOOK URLs
+        // n8n webhook URLs - Your Production Webhooks
         this.n8nWebhooks = {
-            dataLoad: process.env.N8N_DATA_LOAD_WEBHOOK || 'https://your-n8n-instance.com/webhook/dataload',
-            processOrder: process.env.N8N_PROCESS_ORDER_WEBHOOK || 'https://your-n8n-instance.com/webhook/ordersubmit',
-            updateInventory: process.env.N8N_UPDATE_INVENTORY_WEBHOOK || 'https://your-n8n-instance.com/webhook/update-inventory',
-            getLowStock: process.env.N8N_LOW_STOCK_WEBHOOK || 'https://your-n8n-instance.com/webhook/low-stock',
-            getAnalytics: process.env.N8N_ANALYTICS_WEBHOOK || 'https://your-n8n-instance.com/webhook/analytics',
-            dashboardStats: process.env.N8N_DASHBOARD_WEBHOOK || 'https://your-n8n-instance.com/webhook/dashboard-stats'
+            getSettings: process.env.N8N_GET_SETTINGS_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/get-settings',
+            getProducts: process.env.N8N_GET_PRODUCTS_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/get-products', 
+            processOrder: process.env.N8N_PROCESS_ORDER_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/process-order',
+            dashboardStats: process.env.N8N_DASHBOARD_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/dashboard-stats',
+            getLowStock: process.env.N8N_LOW_STOCK_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/low-stock',
+            getAnalytics: process.env.N8N_ANALYTICS_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/analytics',
+            updateInventory: process.env.N8N_UPDATE_INVENTORY_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/update-stock'
         };
         
         // Configuration
@@ -259,7 +260,7 @@ class CoffeePOSServer {
         try {
             // Try to call n8n webhook to get settings from Google Sheets
             try {
-                const response = await this.callN8NWebhook(this.n8nWebhooks.dataLoad, 'GET');
+                const response = await this.callN8NWebhook(this.n8nWebhooks.getSettings, 'GET');
                 
                 if (response && response.success && response.settings) {
                     return res.json({
@@ -317,7 +318,7 @@ class CoffeePOSServer {
         try {
             // Try to call n8n webhook to get products from Google Sheets
             try {
-                const response = await this.callN8NWebhook(this.n8nWebhooks.dataLoad, 'GET');
+                const response = await this.callN8NWebhook(this.n8nWebhooks.getProducts, 'GET');
                 
                 if (response && response.success && response.products) {
                     return res.json({
@@ -642,8 +643,12 @@ class CoffeePOSServer {
    Shop: ${this.config.shopName}
 
 🔗 n8n Webhooks:
-   Data Load: ${this.n8nWebhooks.dataLoad}
+   Get Settings: ${this.n8nWebhooks.getSettings}
+   Get Products: ${this.n8nWebhooks.getProducts}
    Process Order: ${this.n8nWebhooks.processOrder}
+   Dashboard Stats: ${this.n8nWebhooks.dashboardStats}
+   Low Stock: ${this.n8nWebhooks.getLowStock}
+   Analytics: ${this.n8nWebhooks.getAnalytics}
    Update Inventory: ${this.n8nWebhooks.updateInventory}
 
 🎯 Features Enabled:
