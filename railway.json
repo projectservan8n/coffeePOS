@@ -1,0 +1,431 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm ci && npm run build",
+    "watchPatterns": [
+      "**/*.js",
+      "**/*.html",
+      "**/*.css",
+      "package.json",
+      "package-lock.json"
+    ]
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "sleepApplication": false,
+    "restartPolicyType": "ON_FAILURE",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300,
+    "startCommand": "npm start"
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_ENV": "production",
+        "PORT": "${{RAILWAY_PORT}}",
+        "RAILWAY_STATIC_URL": "${{RAILWAY_STATIC_URL}}",
+        "RAILWAY_PUBLIC_DOMAIN": "${{RAILWAY_PUBLIC_DOMAIN}}"
+      }
+    },
+    "staging": {
+      "variables": {
+        "NODE_ENV": "staging",
+        "PORT": "${{RAILWAY_PORT}}"
+      }
+    }
+  },
+  "regions": [
+    "us-west1"
+  ],
+  "plugins": [
+    {
+      "name": "postgresql",
+      "config": {
+        "version": "15",
+        "extensions": ["uuid-ossp", "pgcrypto"]
+      }
+    },
+    {
+      "name": "redis",
+      "config": {
+        "version": "7"
+      }
+    }
+  ],
+  "services": [
+    {
+      "name": "coffee-pos-api",
+      "source": {
+        "type": "github",
+        "repo": "yourusername/coffee-shop-pos",
+        "branch": "main"
+      },
+      "variables": {
+        "NODE_ENV": "production",
+        "SHOP_NAME": "Coffee Paradise",
+        "CURRENCY": "PHP",
+        "TAX_RATE": "0.12",
+        "JWT_SECRET": "${{JWT_SECRET}}",
+        "N8N_WEBHOOK_URL": "${{N8N_WEBHOOK_URL}}",
+        "DATABASE_URL": "${{DATABASE_URL}}",
+        "REDIS_URL": "${{REDIS_URL}}",
+        "GOOGLE_SHEETS_API_KEY": "${{GOOGLE_SHEETS_API_KEY}}",
+        "GOOGLE_SERVICE_ACCOUNT": "${{GOOGLE_SERVICE_ACCOUNT}}",
+        "TWILIO_ACCOUNT_SID": "${{TWILIO_ACCOUNT_SID}}",
+        "TWILIO_AUTH_TOKEN": "${{TWILIO_AUTH_TOKEN}}",
+        "SMTP_HOST": "${{SMTP_HOST}}",
+        "SMTP_PORT": "${{SMTP_PORT}}",
+        "SMTP_USER": "${{SMTP_USER}}",
+        "SMTP_PASS": "${{SMTP_PASS}}",
+        "WEBHOOK_SECRET": "${{WEBHOOK_SECRET}}",
+        "ENCRYPTION_KEY": "${{ENCRYPTION_KEY}}",
+        "SENTRY_DSN": "${{SENTRY_DSN}}",
+        "ANALYTICS_ID": "${{ANALYTICS_ID}}"
+      },
+      "domains": [
+        {
+          "name": "pos.coffeeparadise.ph",
+          "serviceId": "coffee-pos-api"
+        }
+      ],
+      "healthcheck": {
+        "path": "/health",
+        "intervalSeconds": 30,
+        "timeoutSeconds": 10,
+        "failureThreshold": 3
+      },
+      "resources": {
+        "cpu": "0.25",
+        "memory": "512Mi",
+        "replicas": 1
+      },
+      "scaling": {
+        "minReplicas": 1,
+        "maxReplicas": 3,
+        "cpuThreshold": 80,
+        "memoryThreshold": 80
+      }
+    },
+    {
+      "name": "coffee-pos-worker",
+      "source": {
+        "type": "github",
+        "repo": "yourusername/coffee-shop-pos",
+        "branch": "main"
+      },
+      "variables": {
+        "NODE_ENV": "production",
+        "WORKER_MODE": "true",
+        "DATABASE_URL": "${{DATABASE_URL}}",
+        "REDIS_URL": "${{REDIS_URL}}",
+        "N8N_WEBHOOK_URL": "${{N8N_WEBHOOK_URL}}"
+      },
+      "startCommand": "node worker.js",
+      "resources": {
+        "cpu": "0.1",
+        "memory": "256Mi",
+        "replicas": 1
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "pos-uploads",
+      "mountPath": "/app/uploads",
+      "size": "1Gi"
+    },
+    {
+      "name": "pos-logs",
+      "mountPath": "/app/logs",
+      "size": "2Gi"
+    },
+    {
+      "name": "pos-backups",
+      "mountPath": "/app/backups",
+      "size": "5Gi"
+    }
+  ],
+  "networking": {
+    "allowPublic": true,
+    "serviceMesh": true
+  },
+  "observability": {
+    "logging": {
+      "enabled": true,
+      "level": "info",
+      "format": "json"
+    },
+    "metrics": {
+      "enabled": true,
+      "path": "/metrics"
+    },
+    "tracing": {
+      "enabled": true,
+      "samplingRate": 0.1
+    }
+  },
+  "security": {
+    "allowedOrigins": [
+      "https://pos.coffeeparadise.ph",
+      "https://admin.coffeeparadise.ph",
+      "https://app.coffeeparadise.ph"
+    ],
+    "rateLimiting": {
+      "enabled": true,
+      "requestsPerMinute": 100,
+      "burst": 200
+    },
+    "ddosProtection": {
+      "enabled": true
+    },
+    "ipWhitelist": [],
+    "headers": {
+      "forceHTTPS": true,
+      "hsts": {
+        "enabled": true,
+        "maxAge": 31536000,
+        "includeSubdomains": true
+      },
+      "contentSecurityPolicy": {
+        "enabled": true,
+        "directives": {
+          "defaultSrc": ["'self'"],
+          "styleSrc": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          "fontSrc": ["'self'", "https://fonts.gstatic.com"],
+          "scriptSrc": ["'self'", "https://cdn.jsdelivr.net"],
+          "imgSrc": ["'self'", "data:", "https:"],
+          "connectSrc": ["'self'", "https://api.coffeeparadise.ph"]
+        }
+      }
+    }
+  },
+  "backup": {
+    "enabled": true,
+    "schedule": "0 2 * * *",
+    "retention": {
+      "daily": 7,
+      "weekly": 4,
+      "monthly": 6
+    },
+    "destinations": [
+      {
+        "type": "s3",
+        "bucket": "coffee-pos-backups",
+        "region": "us-west-2"
+      }
+    ]
+  },
+  "monitoring": {
+    "alerts": [
+      {
+        "name": "High CPU Usage",
+        "condition": "cpu > 80",
+        "duration": "5m",
+        "channels": ["email", "slack"]
+      },
+      {
+        "name": "High Memory Usage",
+        "condition": "memory > 80",
+        "duration": "5m",
+        "channels": ["email", "slack"]
+      },
+      {
+        "name": "Application Down",
+        "condition": "healthcheck_failed",
+        "duration": "1m",
+        "channels": ["email", "slack", "sms"]
+      },
+      {
+        "name": "High Error Rate",
+        "condition": "error_rate > 5",
+        "duration": "2m",
+        "channels": ["email", "slack"]
+      },
+      {
+        "name": "Slow Response Time",
+        "condition": "response_time > 2000",
+        "duration": "3m",
+        "channels": ["email"]
+      }
+    ],
+    "dashboards": [
+      {
+        "name": "Coffee POS Overview",
+        "panels": [
+          {
+            "title": "Request Rate",
+            "type": "graph",
+            "metrics": ["http_requests_per_second"]
+          },
+          {
+            "title": "Response Time",
+            "type": "graph",
+            "metrics": ["http_response_time_avg"]
+          },
+          {
+            "title": "Error Rate",
+            "type": "graph",
+            "metrics": ["http_errors_per_second"]
+          },
+          {
+            "title": "System Resources",
+            "type": "graph",
+            "metrics": ["cpu_usage", "memory_usage"]
+          }
+        ]
+      }
+    ]
+  },
+  "secrets": [
+    {
+      "name": "JWT_SECRET",
+      "description": "Secret key for JWT token signing"
+    },
+    {
+      "name": "N8N_WEBHOOK_URL",
+      "description": "n8n webhook endpoint for Google Sheets integration"
+    },
+    {
+      "name": "GOOGLE_SHEETS_API_KEY",
+      "description": "Google Sheets API key for data access"
+    },
+    {
+      "name": "GOOGLE_SERVICE_ACCOUNT",
+      "description": "Google Service Account JSON for authentication"
+    },
+    {
+      "name": "TWILIO_ACCOUNT_SID",
+      "description": "Twilio Account SID for SMS notifications"
+    },
+    {
+      "name": "TWILIO_AUTH_TOKEN",
+      "description": "Twilio Auth Token for SMS notifications"
+    },
+    {
+      "name": "SMTP_HOST",
+      "description": "SMTP server hostname for email notifications"
+    },
+    {
+      "name": "SMTP_PORT",
+      "description": "SMTP server port (587 for TLS, 465 for SSL)"
+    },
+    {
+      "name": "SMTP_USER",
+      "description": "SMTP username for email authentication"
+    },
+    {
+      "name": "SMTP_PASS",
+      "description": "SMTP password for email authentication"
+    },
+    {
+      "name": "WEBHOOK_SECRET",
+      "description": "Secret for webhook signature validation"
+    },
+    {
+      "name": "ENCRYPTION_KEY",
+      "description": "Key for encrypting sensitive data"
+    },
+    {
+      "name": "SENTRY_DSN",
+      "description": "Sentry DSN for error tracking and monitoring"
+    },
+    {
+      "name": "ANALYTICS_ID",
+      "description": "Google Analytics tracking ID"
+    }
+  ],
+  "cron": [
+    {
+      "name": "daily-backup",
+      "schedule": "0 2 * * *",
+      "command": "npm run backup",
+      "description": "Daily database and files backup"
+    },
+    {
+      "name": "weekly-cleanup",
+      "schedule": "0 3 * * 0",
+      "command": "npm run cleanup",
+      "description": "Weekly cleanup of old logs and temporary files"
+    },
+    {
+      "name": "monthly-reports",
+      "schedule": "0 9 1 * *",
+      "command": "npm run generate-monthly-report",
+      "description": "Generate monthly business reports"
+    },
+    {
+      "name": "stock-alerts",
+      "schedule": "0 8,12,17 * * *",
+      "command": "npm run check-stock-levels",
+      "description": "Check stock levels and send alerts 3 times daily"
+    },
+    {
+      "name": "health-check",
+      "schedule": "*/5 * * * *",
+      "command": "npm run health",
+      "description": "Health check every 5 minutes"
+    }
+  ],
+  "addons": [
+    {
+      "name": "postgresql",
+      "plan": "hobby",
+      "config": {
+        "version": "15"
+      }
+    },
+    {
+      "name": "redis",
+      "plan": "hobby",
+      "config": {
+        "version": "7",
+        "maxMemory": "256mb"
+      }
+    },
+    {
+      "name": "cloudflare",
+      "plan": "free",
+      "config": {
+        "enableCDN": true,
+        "enableDDoSProtection": true,
+        "enableWebApplicationFirewall": true
+      }
+    }
+  ],
+  "migration": {
+    "enabled": true,
+    "strategy": "rolling",
+    "healthcheck": {
+      "path": "/health",
+      "initialDelaySeconds": 30,
+      "periodSeconds": 10,
+      "timeoutSeconds": 5,
+      "failureThreshold": 3
+    }
+  },
+  "autoscaling": {
+    "enabled": true,
+    "minReplicas": 1,
+    "maxReplicas": 5,
+    "targetCPUUtilization": 70,
+    "targetMemoryUtilization": 80,
+    "scaleDownDelay": "5m",
+    "scaleUpDelay": "2m"
+  },
+  "loadBalancer": {
+    "enabled": true,
+    "algorithm": "round_robin",
+    "healthcheck": {
+      "enabled": true,
+      "path": "/health",
+      "interval": "30s",
+      "timeout": "10s",
+      "healthyThreshold": 2,
+      "unhealthyThreshold": 3
+    },
+    "stickySession": {
+      "enabled": false
+    }
+  }
+}

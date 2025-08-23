@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coffee Paradise POS</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Auth Login Screen -->
+    <div id="authScreen" class="auth-screen">
+        <div class="auth-container">
+            <div class="auth-header">
+                <div class="logo">☕</div>
+                <h1>Coffee Paradise</h1>
+                <p>Point of Sale System</p>
+            </div>
+            <form id="authForm" class="auth-form">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="auth-btn">Login</button>
+            </form>
+            <div class="auth-footer">
+                <p>Coffee Shop POS v1.0 | Powered by Google Sheets</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main POS Interface -->
+    <div id="posInterface" class="pos-interface hidden">
+        <!-- Header -->
+        <header class="pos-header">
+            <div class="header-left">
+                <div class="shop-logo">☕</div>
+                <div class="shop-info">
+                    <h1 id="shopName">Coffee Paradise</h1>
+                    <p id="shopTagline">Fresh Coffee Daily</p>
+                </div>
+            </div>
+            <div class="header-center">
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-dot online"></span>
+                    <span>Online</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="staff-info">
+                    <span id="staffName">Staff Member</span>
+                    <button id="logoutBtn" class="logout-btn">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="pos-main">
+            <!-- Sidebar Categories -->
+            <aside class="categories-sidebar">
+                <div class="search-bar">
+                    <input type="text" id="productSearch" placeholder="Search products..." />
+                    <button class="search-btn">🔍</button>
+                </div>
+                <div class="categories-list" id="categoriesList">
+                    <button class="category-btn active" data-category="all">All Products</button>
+                    <!-- Categories will be loaded dynamically -->
+                </div>
+            </aside>
+
+            <!-- Products Grid -->
+            <section class="products-section">
+                <div class="products-grid" id="productsGrid">
+                    <!-- Products will be loaded dynamically -->
+                    <div class="product-loading">
+                        <p>Loading products...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cart Sidebar -->
+            <aside class="cart-sidebar">
+                <div class="cart-header">
+                    <h3>Current Order</h3>
+                    <button id="clearCart" class="clear-cart-btn">Clear</button>
+                </div>
+                
+                <div class="cart-items" id="cartItems">
+                    <div class="empty-cart">
+                        <p>No items in cart</p>
+                    </div>
+                </div>
+
+                <div class="cart-summary">
+                    <div class="summary-line">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">₱0.00</span>
+                    </div>
+                    <div class="summary-line">
+                        <span>Tax (12%):</span>
+                        <span id="tax">₱0.00</span>
+                    </div>
+                    <div class="summary-line total">
+                        <span>Total:</span>
+                        <span id="total">₱0.00</span>
+                    </div>
+                    <div class="ingredient-cost" id="ingredientCostSection" style="display: none;">
+                        <div class="summary-line">
+                            <span>Cost:</span>
+                            <span id="ingredientCost">₱0.00</span>
+                        </div>
+                        <div class="summary-line profit">
+                            <span>Profit:</span>
+                            <span id="profit">₱0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="payment-section">
+                    <div class="payment-methods">
+                        <button class="payment-btn active" data-method="cash">Cash</button>
+                        <button class="payment-btn" data-method="card">Card</button>
+                        <button class="payment-btn" data-method="gcash">GCash</button>
+                    </div>
+                    <button id="checkoutBtn" class="checkout-btn" disabled>
+                        Complete Order
+                    </button>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Admin Dashboard (Toggle) -->
+        <div id="adminDashboard" class="admin-dashboard hidden">
+            <div class="dashboard-header">
+                <h2>Admin Dashboard</h2>
+                <button id="closeDashboard" class="close-dashboard-btn">×</button>
+            </div>
+            
+            <div class="dashboard-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Today's Sales</h3>
+                        <p class="stat-value" id="todaySales">₱0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Today's Orders</h3>
+                        <p class="stat-value" id="todayOrders">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Average Order</h3>
+                        <p class="stat-value" id="avgOrder">₱0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Profit Margin</h3>
+                        <p class="stat-value" id="profitMargin">0%</p>
+                    </div>
+                </div>
+
+                <div class="charts-section">
+                    <div class="chart-container">
+                        <h3>Sales Over Time</h3>
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Top Products</h3>
+                        <canvas id="productsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="alerts-section">
+                    <h3>Stock Alerts</h3>
+                    <div id="stockAlerts" class="alerts-list">
+                        <!-- Low stock alerts will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Toggle Button -->
+        <button id="adminToggle" class="admin-toggle-btn">📊</button>
+    </div>
+
+    <!-- Product Variant Modal -->
+    <div id="variantModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="variantProductName">Product Variants</h3>
+                <button class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="variants-list" id="variantsList">
+                    <!-- Variants will be loaded dynamically -->
+                </div>
+                <div class="quantity-selector">
+                    <label>Quantity:</label>
+                    <button class="qty-btn" data-action="decrease">-</button>
+                    <input type="number" id="variantQuantity" value="1" min="1">
+                    <button class="qty-btn" data-action="increase">+</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="addVariantToCart" class="add-to-cart-btn">Add to Cart</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>Processing...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

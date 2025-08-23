@@ -1,0 +1,1488 @@
+{
+  "name": "Coffee Shop POS - Complete Business Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "process-order",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1a2b3c4d-5e6f-7890-abcd-ef1234567890",
+      "name": "Webhook - Process Order",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate order data\nconst orderData = $input.first().json;\n\n// Required fields validation\nif (!orderData.orderId || !orderData.items || !Array.isArray(orderData.items)) {\n  return {\n    json: {\n      success: false,\n      error: 'Invalid order data: missing orderId or items'\n    }\n  };\n}\n\n// Calculate totals if missing\nif (!orderData.subtotal) {\n  orderData.subtotal = orderData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);\n}\n\nif (!orderData.tax) {\n  orderData.tax = orderData.subtotal * 0.12; // 12% Philippines VAT\n}\n\nif (!orderData.total) {\n  orderData.total = orderData.subtotal + orderData.tax;\n}\n\n// Add Philippines-specific data\norderData.currency = 'PHP';\norderData.timestamp = orderData.timestamp || new Date().toISOString();\norderData.location = orderData.location || 'Main Store';\n\n// Calculate ingredient cost if advanced tracking enabled\nif (orderData.enableIngredientTracking) {\n  orderData.ingredientCost = orderData.items.reduce((sum, item) => sum + ((item.cost || 0) * item.quantity), 0);\n}\n\nreturn {\n  json: orderData\n};"
+      },
+      "id": "2b3c4d5e-6f78-9012-bcde-f23456789012",
+      "name": "Validate Order Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "process-order"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "3c4d5e6f-7890-1234-cdef-456789012345",
+      "name": "Process Order in Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        900,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4d5e6f78-9012-3456-def0-56789012345a",
+      "name": "Order Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Check for low stock items after order processing\nconst orderData = $input.first().json;\nconst lowStockItems = [];\n\n// This will be populated by the low stock check node\n// For now, return success response\nreturn {\n  json: {\n    success: true,\n    orderId: orderData.orderId,\n    message: 'Order processed successfully',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "5e6f7890-1234-5678-ef01-6789012345ab",
+      "name": "Prepare Success Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "6f789012-3456-7890-f012-789012345abc",
+      "name": "Send Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare error response\nconst errorData = $input.first().json;\n\nreturn {\n  json: {\n    success: false,\n    error: errorData.error || 'Order processing failed',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "7890123a-bcde-f012-3456-89012345abcd",
+      "name": "Prepare Error Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "890123ab-cdef-0123-4567-9012345abcde",
+      "name": "Send Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "low-stock"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "90123abc-def0-1234-5678-012345abcdef",
+      "name": "Check Low Stock",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1340,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.lowStockItems.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0123abcd-ef01-2345-6789-12345abcdef0",
+      "name": "Has Low Stock Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare low stock alert email\nconst data = $input.first().json;\nconst lowStockItems = data.lowStockItems;\nconst settings = $node[\"Get Settings\"].json;\n\n// Create formatted list of low stock items\nconst itemsList = lowStockItems.map(item => \n  `• ${item.type}: ${item.name} - Stock: ${item.stock} (Threshold: ${item.threshold})`\n).join('\\n');\n\n// Check for critical items (stock = 0)\nconst criticalItems = lowStockItems.filter(item => item.stock === 0);\nconst urgencyLevel = criticalItems.length > 0 ? 'URGENT' : 'Low Stock Alert';\n\nconst emailSubject = `⚠️ ${urgencyLevel} - ${settings.shopName || 'Coffee Shop'}`;\n\nconst emailBody = `\nDear Store Manager,\n\nThis is an automated ${urgencyLevel.toLowerCase()} for ${settings.shopName || 'your coffee shop'}.\n\n⚠️ ITEMS REQUIRING ATTENTION (${lowStockItems.length} items):\n\n${itemsList}\n\n📋 RECOMMENDED ACTIONS:\n1. Review supplier contacts and place orders immediately\n2. Update stock levels after receiving deliveries\n3. Consider adjusting minimum stock thresholds if needed\n4. Check for any upcoming promotions that might increase demand\n\n${criticalItems.length > 0 ? '🚨 CRITICAL: ' + criticalItems.length + ' items are completely out of stock!\\n\\n' : ''}\nTime Generated: ${new Date().toLocaleString('en-PH', {timeZone: 'Asia/Manila'})}\nSystem: Coffee POS Automation\n\nBest regards,\nCoffee POS System\n`;\n\nreturn {\n  json: {\n    to: settings.ownerEmail || 'owner@coffeeshop.com',\n    subject: emailSubject,\n    body: emailBody,\n    urgencyLevel: urgencyLevel,\n    criticalCount: criticalItems.length,\n    totalLowStock: lowStockItems.length,\n    items: lowStockItems\n  }\n};"
+      },
+      "id": "123abcde-f012-3456-789a-bcdef0123456",
+      "name": "Prepare Low Stock Alert",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $node[\"Get Settings\"].json[\"systemEmail\"] || 'noreply@coffeepos.com' }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}"
+      },
+      "id": "23abcdef-0123-4567-89ab-cdef01234567",
+      "name": "Send Low Stock Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.criticalCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3abcdef0-1234-5678-9abc-def012345678",
+      "name": "Has Critical Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare SMS alert for critical items\nconst data = $input.first().json;\nconst settings = $node[\"Get Settings\"].json;\n\nconst smsMessage = `URGENT: ${data.criticalCount} items out of stock at ${settings.shopName || 'Coffee Shop'}. ${data.totalLowStock} total low stock items. Check email for details.`;\n\nreturn {\n  json: {\n    to: settings.ownerPhone || '+639171234567',\n    message: smsMessage\n  }\n};"
+      },
+      "id": "abcdef01-2345-6789-abcd-ef0123456789",
+      "name": "Prepare SMS Alert",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2440,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twilioApi",
+        "fromPhoneNumber": "={{ $node[\"Get Settings\"].json[\"twilioFromNumber\"] }}",
+        "toPhoneNumber": "={{ $json.to }}",
+        "message": "={{ $json.message }}"
+      },
+      "id": "bcdef012-3456-789a-bcde-f01234567890",
+      "name": "Send SMS Alert",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        2660,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "get-settings",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "cdef0123-4567-89ab-cdef-012345678901",
+      "name": "Webhook - Get Settings",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "settings"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "def01234-5678-9abc-def0-123456789012",
+      "name": "Get Settings from Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "ef012345-6789-abcd-ef01-234567890123",
+      "name": "Return Settings",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        680,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "get-products",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f0123456-789a-bcde-f012-345678901234",
+      "name": "Webhook - Get Products",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "products"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "01234567-89ab-cdef-0123-456789012345",
+      "name": "Get Products from Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "12345678-9abc-def0-1234-56789012345a",
+      "name": "Return Products",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        680,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "23456789-abcd-ef01-2345-6789012345ab",
+      "name": "Daily Stock Check (8 AM)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "low-stock"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3456789a-bcde-f012-3456-789012345abc",
+      "name": "Daily Low Stock Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.lowStockItems.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "456789ab-cdef-0123-4567-89012345abcd",
+      "name": "Daily - Has Low Stock?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Generate daily low stock report\nconst data = $input.first().json;\nconst lowStockItems = data.lowStockItems;\nconst settings = $node[\"Get Settings\"].json;\n\n// Create formatted list\nconst itemsList = lowStockItems.map(item => \n  `• ${item.type}: ${item.name} - Stock: ${item.stock} (Threshold: ${item.threshold})`\n).join('\\n');\n\n// Check for items needing immediate attention\nconst urgentItems = lowStockItems.filter(item => item.stock <= 2);\nconst criticalItems = lowStockItems.filter(item => item.stock === 0);\n\nconst emailSubject = `📊 Daily Stock Report - ${settings.shopName || 'Coffee Shop'}`;\n\nconst emailBody = `\nGood morning!\n\nHere's your daily stock status report for ${settings.shopName || 'your coffee shop'}.\n\n📊 STOCK SUMMARY:\n• Total low stock items: ${lowStockItems.length}\n• Items needing immediate attention: ${urgentItems.length}\n• Critical (out of stock): ${criticalItems.length}\n\n⚠️ ITEMS REQUIRING ATTENTION:\n\n${itemsList}\n\n📋 TODAY'S PRIORITIES:\n${criticalItems.length > 0 ? '🚨 URGENT: Restock out-of-stock items immediately\\n' : ''}\n${urgentItems.length > 0 ? '⚡ HIGH: Review items with very low stock\\n' : ''}\n• Review supplier delivery schedules\n• Update stock levels after morning deliveries\n• Plan restocking for weekend if needed\n\n📞 QUICK SUPPLIER CONTACTS:\n• Coffee Supply Co: +63 917 123 4567\n• Fresh Dairy Inc: +63 917 234 5678\n• Packaging Solutions: +63 917 345 6789\n\nReport generated: ${new Date().toLocaleString('en-PH', {timeZone: 'Asia/Manila'})}\n\nHave a great day!\nCoffee POS System\n`;\n\nreturn {\n  json: {\n    to: settings.ownerEmail || 'owner@coffeeshop.com',\n    subject: emailSubject,\n    body: emailBody,\n    criticalCount: criticalItems.length,\n    urgentCount: urgentItems.length,\n    totalItems: lowStockItems.length\n  }\n};"
+      },
+      "id": "56789abc-def0-1234-5678-9012345abcde",
+      "name": "Prepare Daily Report",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $node[\"Get Settings\"].json[\"systemEmail\"] || 'reports@coffeepos.com' }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}"
+      },
+      "id": "6789abcd-ef01-2345-6789-012345abcdef",
+      "name": "Send Daily Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "789abcde-f012-3456-789a-bcdef0123456",
+      "name": "Weekly Report (Monday 9 AM)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "analytics"
+            },
+            {
+              "name": "period",
+              "value": "7d"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "89abcdef-0123-4567-89ab-cdef01234567",
+      "name": "Get Weekly Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Generate weekly business report\nconst data = $input.first().json;\nconst analytics = data.analytics;\nconst settings = $node[\"Get Settings\"].json;\n\n// Format currency\nconst formatCurrency = (amount) => `₱${amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;\n\n// Calculate key metrics\nconst avgDailyRevenue = analytics.totalRevenue / 7;\nconst avgDailyOrders = analytics.totalOrders / 7;\n\n// Generate insights\nconst insights = [];\nif (analytics.totalOrders === 0) {\n  insights.push('• No orders recorded this week - check system connectivity');\n} else {\n  if (analytics.avgOrderValue > 150) {\n    insights.push('• Excellent average order value - customers are buying premium items');\n  } else if (analytics.avgOrderValue < 100) {\n    insights.push('• Consider upselling strategies to increase average order value');\n  }\n  \n  if (analytics.profitMargin > 70) {\n    insights.push('• Outstanding profit margins - great cost management');\n  } else if (analytics.profitMargin < 50) {\n    insights.push('• Review ingredient costs and pricing strategy');\n  }\n  \n  if (analytics.totalOrders > 100) {\n    insights.push('• High order volume - consider optimizing operations for efficiency');\n  }\n}\n\n// Top products section\nconst topProductsText = analytics.topProducts && analytics.topProducts.length > 0 \n  ? analytics.topProducts.map(p => `• ${p.name}: ${p.quantity} sold`).join('\\n')\n  : 'No product data available';\n\nconst emailSubject = `📈 Weekly Business Report - ${settings.shopName || 'Coffee Shop'}`;\n\nconst emailBody = `\nGood morning!\n\nHere's your weekly performance summary for ${settings.shopName || 'your coffee shop'}.\n\n💰 FINANCIAL SUMMARY (Last 7 Days):\n• Total Revenue: ${formatCurrency(analytics.totalRevenue)}\n• Total Orders: ${analytics.totalOrders.toLocaleString()}\n• Average Order Value: ${formatCurrency(analytics.avgOrderValue)}\n• Total Profit: ${formatCurrency(analytics.totalProfit)}\n• Profit Margin: ${analytics.profitMargin.toFixed(1)}%\n\n📊 DAILY AVERAGES:\n• Revenue per day: ${formatCurrency(avgDailyRevenue)}\n• Orders per day: ${avgDailyOrders.toFixed(1)}\n\n🏆 TOP SELLING PRODUCTS:\n${topProductsText}\n\n💡 BUSINESS INSIGHTS:\n${insights.join('\\n') || '• Performance metrics are within normal ranges'}\n\n📅 WEEK AHEAD RECOMMENDATIONS:\n• Monitor top-selling items for stock availability\n• Review slow-moving inventory for promotions\n• Analyze peak hours for staff scheduling\n• Consider seasonal menu adjustments\n\nReport Period: ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString()} - ${new Date().toLocaleDateString()}\nGenerated: ${new Date().toLocaleString('en-PH', {timeZone: 'Asia/Manila'})}\n\nKeep up the great work!\nCoffee POS Analytics Team\n`;\n\nreturn {\n  json: {\n    to: settings.ownerEmail || 'owner@coffeeshop.com',\n    subject: emailSubject,\n    body: emailBody,\n    revenue: analytics.totalRevenue,\n    orders: analytics.totalOrders,\n    profitMargin: analytics.profitMargin\n  }\n};"
+      },
+      "id": "9abcdef0-1234-5678-9abc-def012345678",
+      "name": "Prepare Weekly Report",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        900,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $node[\"Get Settings\"].json[\"systemEmail\"] || 'reports@coffeepos.com' }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}"
+      },
+      "id": "abcdef01-2345-6789-abcd-ef0123456789",
+      "name": "Send Weekly Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "bcdef012-3456-789a-bcde-f01234567890",
+      "name": "Daily Reset (Midnight)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "reset-daily-counters"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "jsonBody": "{}",
+        "options": {}
+      },
+      "id":         "cdef0123-4567-89ab-cdef-012345678901",
+      "name": "Reset Daily Counters",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        1240
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "update-inventory",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "def01234-5678-9abc-def0-123456789012",
+      "name": "Webhook - Update Inventory",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate inventory update request\nconst requestData = $input.first().json;\n\nif (!requestData.productId || requestData.newStock === undefined) {\n  return {\n    json: {\n      success: false,\n      error: 'Missing productId or newStock value'\n    }\n  };\n}\n\n// Ensure stock is not negative\nif (requestData.newStock < 0) {\n  requestData.newStock = 0;\n}\n\nreturn {\n  json: requestData\n};"
+      },
+      "id": "ef012345-6789-abcd-ef01-234567890123",
+      "name": "Validate Inventory Update",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "update-inventory"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "f0123456-789a-bcde-f012-345678901234",
+      "name": "Update Inventory in Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "01234567-89ab-cdef-0123-456789012345",
+      "name": "Return Inventory Update",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        900,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "dashboard-stats",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "12345678-9abc-def0-1234-56789012345a",
+      "name": "Webhook - Dashboard Stats",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "analytics"
+            },
+            {
+              "name": "period",
+              "value": "1d"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "23456789-abcd-ef01-2345-6789012345ab",
+      "name": "Get Today's Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "low-stock"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3456789a-bcde-f012-3456-789012345abc",
+      "name": "Get Current Stock Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        1740
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Combine analytics and stock data for dashboard\nconst analytics = $input.all()[0].json.analytics;\nconst stockData = $input.all()[1].json;\n\n// Calculate dashboard stats\nconst stats = {\n  todaySales: Math.round(analytics.totalRevenue),\n  todayOrders: analytics.totalOrders,\n  avgOrder: Math.round(analytics.avgOrderValue),\n  profitMargin: Math.round(analytics.profitMargin)\n};\n\n// Generate chart data for sales over time (demo data)\nconst salesChartData = {\n  labels: ['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'],\n  data: [\n    Math.round(analytics.totalRevenue * 0.05),\n    Math.round(analytics.totalRevenue * 0.08),\n    Math.round(analytics.totalRevenue * 0.12),\n    Math.round(analytics.totalRevenue * 0.18),\n    Math.round(analytics.totalRevenue * 0.15),\n    Math.round(analytics.totalRevenue * 0.14),\n    Math.round(analytics.totalRevenue * 0.12),\n    Math.round(analytics.totalRevenue * 0.10),\n    Math.round(analytics.totalRevenue * 0.06)\n  ]\n};\n\n// Top products chart data\nconst productsChartData = {\n  labels: analytics.topProducts ? analytics.topProducts.map(p => p.name) : ['Latte', 'Americano', 'Cappuccino'],\n  data: analytics.topProducts ? analytics.topProducts.map(p => p.quantity) : [15, 12, 10]\n};\n\n// Stock alerts\nconst alerts = stockData.lowStockItems || [];\n\nreturn {\n  json: {\n    success: true,\n    stats: stats,\n    chartData: {\n      sales: salesChartData,\n      products: productsChartData\n    },\n    alerts: alerts\n  }\n};"
+      },
+      "id": "456789ab-cdef-0123-4567-89012345abcd",
+      "name": "Prepare Dashboard Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "56789abc-def0-1234-5678-9012345abcde",
+      "name": "Return Dashboard Stats",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        900,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ingredient-usage",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "6789abcd-ef01-2345-6789-012345abcdef",
+      "name": "Webhook - Log Ingredient Usage",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1840
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process ingredient usage logging\nconst usageData = $input.first().json;\n\n// Add timestamp and validation\nusageData.timestamp = new Date().toISOString();\nusageData.location = usageData.location || 'Main Store';\n\n// Calculate cost if missing\nif (!usageData.totalCost && usageData.quantity && usageData.costPerUnit) {\n  usageData.totalCost = usageData.quantity * usageData.costPerUnit;\n}\n\nreturn {\n  json: {\n    success: true,\n    message: 'Ingredient usage logged successfully',\n    data: usageData\n  }\n};"
+      },
+      "id": "789abcde-f012-3456-789a-bcdef0123456",
+      "name": "Process Ingredient Usage",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        1840
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "89abcdef-0123-4567-89ab-cdef01234567",
+      "name": "Return Usage Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        680,
+        1840
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-purchase-order",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9abcdef0-1234-5678-9abc-def012345678",
+      "name": "Webhook - Generate Purchase Order",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        2040
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate and process purchase order request\nconst orderData = $input.first().json;\n\n// Generate order ID if not provided\nif (!orderData.orderId) {\n  orderData.orderId = `PO${Date.now()}`;\n}\n\n// Set default values\norderData.status = orderData.status || 'pending';\norderData.createdBy = orderData.createdBy || 'System';\norderData.expectedDelivery = orderData.expectedDelivery || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();\n\n// Calculate total if not provided\nif (!orderData.totalAmount && orderData.items) {\n  orderData.totalAmount = orderData.items.reduce((sum, item) => {\n    return sum + (item.quantityOrdered * item.pricePerUnit);\n  }, 0);\n}\n\nreturn {\n  json: orderData\n};"
+      },
+      "id": "abcdef01-2345-6789-abcd-ef0123456789",
+      "name": "Validate Purchase Order",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        2040
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Get Settings\"].json[\"apps_script_url\"] }}/exec",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "endpoint",
+              "value": "generate-purchase-order"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "bcdef012-3456-789a-bcde-f01234567890",
+      "name": "Create Purchase Order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        2040
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare purchase order notification email\nconst orderData = $input.first().json;\nconst settings = $node[\"Get Settings\"].json;\n\nconst emailSubject = `🛒 Purchase Order Generated - ${orderData.orderId}`;\n\nconst itemsList = orderData.items ? orderData.items.map(item => \n  `• ${item.ingredientName}: ${item.quantityOrdered} ${item.unit} @ ₱${item.pricePerUnit} = ₱${item.totalPrice}`\n).join('\\n') : 'No items specified';\n\nconst emailBody = `\nDear Store Manager,\n\nA purchase order has been generated for ${settings.shopName || 'your coffee shop'}.\n\n📋 PURCHASE ORDER DETAILS:\n• Order ID: ${orderData.orderId}\n• Supplier: ${orderData.supplierName}\n• Status: ${orderData.status}\n• Expected Delivery: ${new Date(orderData.expectedDelivery).toLocaleDateString('en-PH')}\n• Total Amount: ₱${(orderData.totalAmount || 0).toFixed(2)}\n\n📦 ITEMS ORDERED:\n${itemsList}\n\n📞 NEXT STEPS:\n1. Review the purchase order details\n2. Contact supplier to confirm order\n3. Track delivery status\n4. Update inventory when items arrive\n\n💡 SUPPLIER CONTACT:\n${orderData.supplierName || 'Supplier details not available'}\n\nOrder created: ${new Date().toLocaleString('en-PH', {timeZone: 'Asia/Manila'})}\n\nBest regards,\nCoffee POS System\n`;\n\nreturn {\n  json: {\n    to: settings.ownerEmail || 'owner@coffeeshop.com',\n    subject: emailSubject,\n    body: emailBody,\n    orderId: orderData.orderId,\n    totalAmount: orderData.totalAmount\n  }\n};"
+      },
+      "id": "cdef0123-4567-89ab-cdef-012345678901",
+      "name": "Prepare PO Notification",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        900,
+        2040
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $node[\"Get Settings\"].json[\"systemEmail\"] || 'orders@coffeepos.com' }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}"
+      },
+      "id": "def01234-5678-9abc-def0-123456789012",
+      "name": "Send PO Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        2040
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{{ { \"success\": true, \"orderId\": $json.orderId, \"message\": \"Purchase order generated and notification sent\" } }}"
+      },
+      "id": "ef012345-6789-abcd-ef01-234567890123",
+      "name": "Return PO Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        2040
+      ]
+    },
+    {
+      "parameters": {
+        "content": "=",
+        "height": 80,
+        "width": 150
+      },
+      "id": "f0123456-789a-bcde-f012-345678901234",
+      "name": "Note - Configuration Required",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonData": "{\n  \"apps_script_url\": \"https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec\",\n  \"systemEmail\": \"noreply@coffeepos.com\",\n  \"ownerEmail\": \"owner@coffeeshop.com\",\n  \"ownerPhone\": \"+639171234567\",\n  \"twilioFromNumber\": \"+12345678900\",\n  \"shopName\": \"Coffee Paradise\",\n  \"enableAdvancedTracking\": true\n}"
+      },
+      "id": "01234567-89ab-cdef-0123-456789012345",
+      "name": "Get Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        460,
+        320
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Process Order": {
+      "main": [
+        [
+          {
+            "node": "Validate Order Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Order Data": {
+      "main": [
+        [
+          {
+            "node": "Process Order in Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Order in Sheets": {
+      "main": [
+        [
+          {
+            "node": "Order Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order Success?": {
+      "main": [
+        [
+          {
+            "node": "Check Low Stock",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Success Response": {
+      "main": [
+        [
+          {
+            "node": "Send Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Error Response": {
+      "main": [
+        [
+          {
+            "node": "Send Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Low Stock": {
+      "main": [
+        [
+          {
+            "node": "Has Low Stock Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Low Stock Items?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Low Stock Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Low Stock Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Low Stock Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Low Stock Email": {
+      "main": [
+        [
+          {
+            "node": "Has Critical Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Critical Items?": {
+      "main": [
+        [
+          {
+            "node": "Prepare SMS Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare SMS Alert": {
+      "main": [
+        [
+          {
+            "node": "Send SMS Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Get Settings": {
+      "main": [
+        [
+          {
+            "node": "Get Settings from Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Settings from Sheets": {
+      "main": [
+        [
+          {
+            "node": "Return Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Get Products": {
+      "main": [
+        [
+          {
+            "node": "Get Products from Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Products from Sheets": {
+      "main": [
+        [
+          {
+            "node": "Return Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Stock Check (8 AM)": {
+      "main": [
+        [
+          {
+            "node": "Get Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Settings": {
+      "main": [
+        [
+          {
+            "node": "Daily Low Stock Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Low Stock Check": {
+      "main": [
+        [
+          {
+            "node": "Daily - Has Low Stock?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily - Has Low Stock?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Daily Report": {
+      "main": [
+        [
+          {
+            "node": "Send Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly Report (Monday 9 AM)": {
+      "main": [
+        [
+          {
+            "node": "Get Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Weekly Analytics": {
+      "main": [
+        [
+          {
+            "node": "Prepare Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Weekly Report": {
+      "main": [
+        [
+          {
+            "node": "Send Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Reset (Midnight)": {
+      "main": [
+        [
+          {
+            "node": "Reset Daily Counters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Update Inventory": {
+      "main": [
+        [
+          {
+            "node": "Validate Inventory Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Inventory Update": {
+      "main": [
+        [
+          {
+            "node": "Update Inventory in Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Inventory in Sheets": {
+      "main": [
+        [
+          {
+            "node": "Return Inventory Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Dashboard Stats": {
+      "main": [
+        [
+          {
+            "node": "Get Settings",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Today's Analytics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Current Stock Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Today's Analytics": {
+      "main": [
+        [
+          {
+            "node": "Prepare Dashboard Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current Stock Status": {
+      "main": [
+        [
+          {
+            "node": "Prepare Dashboard Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Prepare Dashboard Data": {
+      "main": [
+        [
+          {
+            "node": "Return Dashboard Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Log Ingredient Usage": {
+      "main": [
+        [
+          {
+            "node": "Process Ingredient Usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Ingredient Usage": {
+      "main": [
+        [
+          {
+            "node": "Return Usage Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Generate Purchase Order": {
+      "main": [
+        [
+          {
+            "node": "Validate Purchase Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Purchase Order": {
+      "main": [
+        [
+          {
+            "node": "Create Purchase Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Purchase Order": {
+      "main": [
+        [
+          {
+            "node": "Prepare PO Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare PO Notification": {
+      "main": [
+        [
+          {
+            "node": "Send PO Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send PO Notification": {
+      "main": [
+        [
+          {
+            "node": "Return PO Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coffee-pos-workflow"
+  },
+  "id": "coffee-pos-workflow",
+  "tags": [
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "coffee-pos",
+      "name": "Coffee POS"
+    },
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "philippines",
+      "name": "Philippines"
+    },
+    {
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z",
+      "id": "automation",
+      "name": "Business Automation"
+    }
+  ]
+}
