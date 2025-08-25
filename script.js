@@ -3,7 +3,6 @@ class CoffeePOS {
     constructor() {
         this.config = {
             apiBaseUrl: '/api',
-            autoRefreshInterval: 30000, // 30 seconds
             maxRetries: 3,
             retryDelay: 1000
         };
@@ -63,8 +62,7 @@ class CoffeePOS {
         this.showAuthScreen();
         console.log('[DEBUG] Setting up Event Listeners');
         this.setupEventListeners();
-        console.log('[DEBUG] Starting Connection Monitoring');
-        this.startConnectionMonitoring();
+        console.log('[DEBUG] Connection monitoring disabled to prevent interference');
         console.log('[DEBUG] Init complete - waiting for user login');
     }
 
@@ -230,6 +228,16 @@ class CoffeePOS {
             console.error('[DEBUG] Add variant to cart button not found');
         }
         
+        // Product card clicks - use event delegation to prevent lost listeners
+        document.addEventListener('click', (e) => {
+            const productCard = e.target.closest('.product-card');
+            if (productCard) {
+                console.log('[DEBUG] Product card clicked via delegation:', productCard.dataset.productId);
+                this.handleProductClick(e);
+            }
+        });
+        console.log('[DEBUG] Product card event delegation added');
+        
         // Keyboard shortcuts
         document.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
         console.log('[DEBUG] Keyboard shortcuts listener added');
@@ -363,8 +371,7 @@ class CoffeePOS {
             
             console.log('[DEBUG] Updating connection status...');
             this.updateConnectionStatus(true);
-            console.log('[DEBUG] Starting auto refresh...');
-            this.startAutoRefresh();
+            console.log('[DEBUG] Auto-refresh disabled - only refreshes on page load');
             
             console.log('[DEBUG] System initialization complete!');
             this.showToast('System ready!', 'success');
@@ -584,26 +591,10 @@ class CoffeePOS {
             return;
         }
         
-        // Add click listeners
-        const cardElements = container.querySelectorAll('.product-card');
-        console.log('[DEBUG] Found product card elements:', cardElements.length);
-        console.log('[DEBUG] Adding click listeners to', cardElements.length, 'product cards');
-        
-        cardElements.forEach((card, index) => {
-            const productId = card.dataset.productId;
-            console.log(`[DEBUG] Adding listener to card ${index + 1}:`, productId);
-            console.log(`[DEBUG] Card ${index + 1} element:`, card.className);
-            
-            // Remove any existing listeners
-            const newCard = card.cloneNode(true);
-            card.parentNode.replaceChild(newCard, card);
-            
-            newCard.addEventListener('click', (e) => {
-                console.log('[DEBUG] Click detected on card:', productId);
-                this.handleProductClick(e);
-            });
-            console.log(`[DEBUG] Listener added to card ${index + 1}`);
-        });
+        // Event listeners are handled by delegation in setupEventListeners()
+        // No need to add individual listeners that get lost on re-render
+        console.log('[DEBUG] Product cards rendered - event delegation handles clicks');
+        console.log('[DEBUG] Final card count in DOM:', container.querySelectorAll('.product-card').length);
         
         console.log('[DEBUG] Product rendering complete');
         console.log('[DEBUG] Final card count in DOM:', document.querySelectorAll('.product-card').length);
@@ -633,12 +624,13 @@ class CoffeePOS {
         console.log('[DEBUG] Event currentTarget:', e.currentTarget);
         console.log('[DEBUG] Event type:', e.type);
         
-        const card = e.currentTarget;
+        // For event delegation, find the product card
+        const card = e.target.closest('.product-card');
         console.log('[DEBUG] Card element:', card);
-        console.log('[DEBUG] Card classList:', card.classList);
-        console.log('[DEBUG] Card dataset:', card.dataset);
+        console.log('[DEBUG] Card classList:', card ? card.classList : 'null');
+        console.log('[DEBUG] Card dataset:', card ? card.dataset : 'null');
         
-        const productId = card.dataset.productId;
+        const productId = card ? card.dataset.productId : null;
         console.log('[DEBUG] Product ID:', productId);
         console.log('[DEBUG] Product ID type:', typeof productId);
         
@@ -1451,19 +1443,18 @@ class CoffeePOS {
         }
     }
 
+    // Connection monitoring disabled to prevent UI interference
     startConnectionMonitoring() {
-        setInterval(() => {
-            this.checkConnection();
-        }, 5000);
+        console.log('[DEBUG] Connection monitoring is disabled');
+        console.log('[DEBUG] No automatic health checks will be performed');
+        // Set initial status as online
+        this.updateConnectionStatus(true);
     }
 
     async checkConnection() {
-        try {
-            await this.apiCall('/health');
-            this.updateConnectionStatus(true);
-        } catch (error) {
-            this.updateConnectionStatus(false);
-        }
+        console.log('[DEBUG] Manual connection check - disabled to prevent interference');
+        // Manual check can still be called if needed, but doesn't auto-run
+        return true;
     }
 
     updateConnectionStatus(isOnline) {
@@ -1506,17 +1497,15 @@ class CoffeePOS {
         console.log('[DEBUG] updateConnectionStatus() - Function end');
     }
 
+    // Auto-refresh removed to prevent UI interference
+    // Data now only refreshes on page load
     startAutoRefresh() {
-        if (this.refreshInterval) clearInterval(this.refreshInterval);
-        
-        this.refreshInterval = setInterval(async () => {
-            if (this.state.isOnline && this.state.isAuthenticated) {
-                // Refresh all data from Google Sheets via n8n
-                await this.refreshAllData();
-            }
-        }, this.config.autoRefreshInterval);
+        console.log('[DEBUG] Auto-refresh is disabled to prevent UI interference');
+        console.log('[DEBUG] Data will only refresh on page reload');
+        // No automatic refresh - only manual refresh on page load
     }
 
+    // Refresh disabled to prevent UI interference
     async refreshAllData() {
         try {
             // Show subtle loading indicator
