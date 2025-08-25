@@ -655,11 +655,19 @@ class CoffeePOS {
     }
 
     renderCharts(chartData) {
-        // Sales Chart
-        const salesCtx = document.getElementById('salesChart').getContext('2d');
-        if (this.charts.sales) this.charts.sales.destroy();
-        
-        this.charts.sales = new Chart(salesCtx, {
+        // Check if Chart.js is available
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js not loaded, skipping chart rendering');
+            this.showChartPlaceholder();
+            return;
+        }
+
+        try {
+            // Sales Chart
+            const salesCtx = document.getElementById('salesChart').getContext('2d');
+            if (this.charts.sales) this.charts.sales.destroy();
+            
+            this.charts.sales = new Chart(salesCtx, {
             type: 'line',
             data: {
                 labels: chartData.sales.labels,
@@ -704,6 +712,24 @@ class CoffeePOS {
                 }
             }
         });
+        
+        } catch (error) {
+            console.error('Error rendering charts:', error);
+            this.showChartPlaceholder();
+        }
+    }
+
+    showChartPlaceholder() {
+        const salesChart = document.getElementById('salesChart');
+        const productsChart = document.getElementById('productsChart');
+        
+        if (salesChart) {
+            salesChart.parentElement.innerHTML = '<div style="text-align: center; padding: 50px; color: #666;">Chart unavailable - External resources loading</div>';
+        }
+        
+        if (productsChart) {
+            productsChart.parentElement.innerHTML = '<div style="text-align: center; padding: 50px; color: #666;">Chart unavailable - External resources loading</div>';
+        }
     }
 
     renderStockAlerts(alerts) {

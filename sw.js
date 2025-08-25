@@ -27,11 +27,12 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Skip cross-origin requests to avoid CSP issues
+  // Skip cross-origin requests entirely to avoid CSP issues
   if (url.origin !== location.origin) {
     return;
   }
   
+  // Only handle same-origin requests
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
