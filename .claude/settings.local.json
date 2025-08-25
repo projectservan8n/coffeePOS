@@ -12,10 +12,13 @@
       "Bash(npm install:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(railway --version)",
+      "Bash(railway status:*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\USER''''S\\Desktop\\COFEE POS"
     ]
-  }
+  },
+  "outputStyle": "default"
 }
