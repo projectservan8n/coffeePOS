@@ -13,13 +13,15 @@ class CoffeePOSServer {
         this.app = express();
         this.port = process.env.PORT || process.env.RAILWAY_PORT || 3000;
         
-        // n8n webhook URLs - Updated for Simplified Workflow
+        // n8n webhook URLs - Individual Endpoints
         this.n8nWebhooks = {
-            dataLoad: process.env.N8N_DATALOAD_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/dataload',
+            getProducts: process.env.N8N_GET_PRODUCTS_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/get-products',
+            getSettings: process.env.N8N_GET_SETTINGS_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/get-settings',
             processOrder: process.env.N8N_PROCESS_ORDER_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/process-order',
             updateStock: process.env.N8N_UPDATE_STOCK_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/update-stock',
             analytics: process.env.N8N_ANALYTICS_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/analytics',
             lowStock: process.env.N8N_LOW_STOCK_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/low-stock',
+            dashboardStats: process.env.N8N_DASHBOARD_STATS_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/dashboard-stats',
             ingredientUsage: process.env.N8N_INGREDIENT_USAGE_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/ingredient-usage',
             generatePurchaseOrder: process.env.N8N_PURCHASE_ORDER_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/generate-purchase-order'
         };
@@ -101,9 +103,9 @@ class CoffeePOSServer {
         this.app.post('/api/auth/login', this.handleLogin.bind(this));
         this.app.post('/api/auth/logout', this.authenticateToken.bind(this), this.handleLogout.bind(this));
         
-        // POS Data routes - Updated for Consolidated n8n Workflow
-        this.app.get('/api/get-settings', this.handleGetData.bind(this, 'settings'));
-        this.app.get('/api/get-products', this.handleGetData.bind(this, 'products'));
+        // POS Data routes - Individual n8n Webhooks
+        this.app.get('/api/get-settings', this.handleGetSettings.bind(this));
+        this.app.get('/api/get-products', this.handleGetProducts.bind(this));
         this.app.post('/api/process-order', this.authenticateToken.bind(this), this.handleProcessOrder.bind(this));
         this.app.post('/api/update-inventory', this.authenticateToken.bind(this), this.handleUpdateInventory.bind(this));
         
@@ -111,9 +113,6 @@ class CoffeePOSServer {
         this.app.get('/api/dashboard-stats', this.authenticateToken.bind(this), this.handleDashboardStats.bind(this));
         this.app.get('/api/low-stock', this.authenticateToken.bind(this), this.handleLowStock.bind(this));
         this.app.get('/api/analytics', this.authenticateToken.bind(this), this.handleAnalytics.bind(this));
-        
-        // New consolidated data endpoint
-        this.app.get('/api/data', this.handleConsolidatedData.bind(this));
         
         // Error handling
         this.app.use(this.errorHandler.bind(this));
@@ -259,135 +258,61 @@ class CoffeePOSServer {
         });
     }
 
-    // New consolidated data handler
-    async handleConsolidatedData(req, res) {
+    async handleGetSettings(req, res) {
         try {
-            // Call the consolidated dataload webhook
-            const response = await this.callN8NWebhook(this.n8nWebhooks.dataLoad, 'GET');
+            // Call individual settings webhook
+            const response = await this.callN8NWebhook(this.n8nWebhooks.getSettings, 'GET');
             
             if (response && response.success) {
                 return res.json(response);
             }
             
-            // If webhook fails, return fallback data
-            throw new Error('Webhook returned no data');
-            
-        } catch (webhookError) {
-            console.log('n8n consolidated webhook not available, using demo data:', webhookError.message);
-            
-            // Return fallback consolidated data structure
-            const fallbackData = {
+            // Fallback to default settings
+            res.json({
                 success: true,
-                timestamp: new Date().toISOString(),
-                data: {
-                    products: this.getDemoProducts(),
-                    settings: this.getDefaultSettings(),
-                    productsByCategory: {},
-                    lowStockItems: [],
-                    orders: { total: 0, todayCount: 0, todayRevenue: 0 }
-                },
-                summary: {
-                    totalProducts: this.getDemoProducts().length,
-                    activeProducts: this.getDemoProducts().length,
-                    totalSettings: 8,
-                    totalOrders: 0,
-                    todayOrders: 0,
-                    lowStockCount: 0,
-                    criticalStockCount: 0,
-                    categories: ['Coffee - Espresso', 'Coffee - Milk Based'],
-                    avgPrice: 90
-                }
-            };
-            
-            // Group demo products by category
-            const products = this.getDemoProducts();
-            products.forEach(product => {
-                if (!fallbackData.data.productsByCategory[product.category]) {
-                    fallbackData.data.productsByCategory[product.category] = [];
-                }
-                fallbackData.data.productsByCategory[product.category].push(product);
+                settings: this.getDefaultSettings()
             });
             
-            res.json(fallbackData);
-        }
-    }
-
-    // Individual data handlers that use the consolidated endpoint
-    async handleGetData(dataType, req, res) {
-        try {
-            const consolidatedData = await this.getConsolidatedData();
+        } catch (webhookError) {
+            console.log('n8n settings webhook not available, using default settings:', webhookError.message);
             
-            if (dataType === 'settings') {
-                res.json({
-                    success: true,
-                    settings: consolidatedData.data.settings
-                });
-            } else if (dataType === 'products') {
-                res.json({
-                    success: true,
-                    products: consolidatedData.data.products,
-                    lastUpdate: consolidatedData.timestamp,
-                    totalProducts: consolidatedData.summary.totalProducts,
-                    activeProducts: consolidatedData.summary.activeProducts
-                });
-            } else {
-                res.status(400).json({
-                    success: false,
-                    message: 'Invalid data type requested'
-                });
-            }
-        } catch (error) {
-            console.error(`Get ${dataType} error:`, error);
-            
-            // Fallback for specific data types
-            if (dataType === 'settings') {
-                res.json({
-                    success: true,
-                    settings: this.getDefaultSettings()
-                });
-            } else if (dataType === 'products') {
-                const demoProducts = this.getDemoProducts();
-                res.json({
-                    success: true,
-                    products: demoProducts,
-                    lastUpdate: new Date().toISOString()
-                });
-            }
-        }
-    }
-
-    // Helper method to get consolidated data
-    async getConsolidatedData() {
-        try {
-            const response = await this.callN8NWebhook(this.n8nWebhooks.dataLoad, 'GET');
-            if (response && response.success) {
-                return response;
-            }
-            throw new Error('Webhook failed');
-        } catch (error) {
-            // Return fallback data
-            return {
+            res.json({
                 success: true,
-                timestamp: new Date().toISOString(),
-                data: {
-                    products: this.getDemoProducts(),
-                    settings: this.getDefaultSettings(),
-                    productsByCategory: {},
-                    lowStockItems: [],
-                    orders: { total: 0, todayCount: 0, todayRevenue: 0 }
-                },
-                summary: {
-                    totalProducts: this.getDemoProducts().length,
-                    activeProducts: this.getDemoProducts().length,
-                    totalSettings: 8,
-                    totalOrders: 0,
-                    todayOrders: 0,
-                    lowStockCount: 0,
-                    criticalStockCount: 0,
-                    categories: ['Coffee - Espresso', 'Coffee - Milk Based'],
-                    avgPrice: 90
-                }
-            };
+                settings: this.getDefaultSettings()
+            });
+        }
+    }
+
+    async handleGetProducts(req, res) {
+        try {
+            // Call individual products webhook
+            const response = await this.callN8NWebhook(this.n8nWebhooks.getProducts, 'GET');
+            
+            if (response && response.success) {
+                return res.json(response);
+            }
+            
+            // Fallback to demo products
+            const demoProducts = this.getDemoProducts();
+            res.json({
+                success: true,
+                products: demoProducts,
+                lastUpdate: new Date().toISOString(),
+                totalProducts: demoProducts.length,
+                activeProducts: demoProducts.length
+            });
+            
+        } catch (webhookError) {
+            console.log('n8n products webhook not available, using demo products:', webhookError.message);
+            
+            const demoProducts = this.getDemoProducts();
+            res.json({
+                success: true,
+                products: demoProducts,
+                lastUpdate: new Date().toISOString(),
+                totalProducts: demoProducts.length,
+                activeProducts: demoProducts.length
+            });
         }
     }
 
@@ -500,42 +425,20 @@ class CoffeePOSServer {
 
     async handleDashboardStats(req, res) {
         try {
-            // Get consolidated data which includes dashboard information
-            const consolidatedData = await this.getConsolidatedData();
+            // Call individual dashboard stats webhook
+            const response = await this.callN8NWebhook(this.n8nWebhooks.dashboardStats, 'GET');
             
-            if (consolidatedData && consolidatedData.success) {
-                const stats = {
-                    success: true,
-                    stats: {
-                        todaySales: consolidatedData.data.orders.todayRevenue || 0,
-                        todayOrders: consolidatedData.data.orders.todayCount || 0,
-                        avgOrder: consolidatedData.data.orders.todayCount > 0 
-                            ? Math.round((consolidatedData.data.orders.todayRevenue / consolidatedData.data.orders.todayCount) * 100) / 100 
-                            : 0,
-                        profitMargin: 68
-                    },
-                    chartData: {
-                        sales: {
-                            labels: ['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM'],
-                            data: [1200, 1800, 2400, 3200, 2800, 2200, 2100]
-                        },
-                        products: {
-                            labels: ['Latte', 'Americano', 'Cappuccino', 'Espresso', 'Mocha'],
-                            data: [15, 12, 10, 8, 7]
-                        }
-                    },
-                    alerts: consolidatedData.data.lowStockItems || []
-                };
-                
-                return res.json(stats);
+            if (response && response.success) {
+                return res.json(response);
             }
             
             // Fallback to demo stats
             const demoStats = this.getDemoStats();
             res.json(demoStats);
             
-        } catch (error) {
-            console.error('Dashboard stats error:', error);
+        } catch (webhookError) {
+            console.log('n8n dashboard webhook not available, using demo stats:', webhookError.message);
+            
             const demoStats = this.getDemoStats();
             res.json(demoStats);
         }
@@ -543,32 +446,23 @@ class CoffeePOSServer {
 
     async handleLowStock(req, res) {
         try {
-            // Try n8n webhook first
-            try {
-                const response = await this.callN8NWebhook(this.n8nWebhooks.lowStock, 'GET');
-                
-                if (response && response.success) {
-                    return res.json(response);
-                }
-            } catch (webhookError) {
-                console.log('n8n low stock webhook not available, using consolidated data:', webhookError.message);
+            // Call individual low stock webhook
+            const response = await this.callN8NWebhook(this.n8nWebhooks.lowStock, 'GET');
+            
+            if (response && response.success) {
+                return res.json(response);
             }
             
-            // Fallback to consolidated data
-            const consolidatedData = await this.getConsolidatedData();
-            
+            // Fallback response
             res.json({
                 success: true,
-                lowStockItems: consolidatedData.data.lowStockItems || [],
-                summary: {
-                    total: consolidatedData.summary.lowStockCount || 0,
-                    critical: consolidatedData.summary.criticalStockCount || 0,
-                    warning: (consolidatedData.summary.lowStockCount || 0) - (consolidatedData.summary.criticalStockCount || 0)
-                }
+                lowStockItems: [],
+                summary: { total: 0, critical: 0, warning: 0 }
             });
             
-        } catch (error) {
-            console.error('Low stock error:', error);
+        } catch (webhookError) {
+            console.log('n8n low stock webhook not available:', webhookError.message);
+            
             res.json({
                 success: true,
                 lowStockItems: [],
@@ -581,15 +475,11 @@ class CoffeePOSServer {
         try {
             const { period = '7d' } = req.query;
             
-            // Try n8n webhook first
-            try {
-                const response = await this.callN8NWebhook(this.n8nWebhooks.analytics, 'GET', { period });
-                
-                if (response && response.success) {
-                    return res.json(response);
-                }
-            } catch (webhookError) {
-                console.log('n8n analytics webhook not available, using demo analytics:', webhookError.message);
+            // Call individual analytics webhook
+            const response = await this.callN8NWebhook(this.n8nWebhooks.analytics, 'GET', { period });
+            
+            if (response && response.success) {
+                return res.json(response);
             }
             
             // Fallback analytics
@@ -600,11 +490,13 @@ class CoffeePOSServer {
                 period
             });
             
-        } catch (error) {
-            console.error('Analytics error:', error);
+        } catch (webhookError) {
+            console.log('n8n analytics webhook not available, using demo analytics:', webhookError.message);
+            
+            const analytics = this.calculateDemoAnalytics(period);
             res.json({
                 success: true,
-                analytics: this.calculateDemoAnalytics(period),
+                analytics,
                 period
             });
         }
@@ -735,9 +627,11 @@ class CoffeePOSServer {
    Shop: ${this.config.shopName}
 
 🔗 n8n Webhooks:
-   Data Load (Consolidated): ${this.n8nWebhooks.dataLoad}
+   Get Products: ${this.n8nWebhooks.getProducts}
+   Get Settings: ${this.n8nWebhooks.getSettings}
    Process Order: ${this.n8nWebhooks.processOrder}
    Update Stock: ${this.n8nWebhooks.updateStock}
+   Dashboard Stats: ${this.n8nWebhooks.dashboardStats}
    Analytics: ${this.n8nWebhooks.analytics}
    Low Stock: ${this.n8nWebhooks.lowStock}
    Ingredient Usage: ${this.n8nWebhooks.ingredientUsage}
@@ -746,7 +640,7 @@ class CoffeePOSServer {
 🎯 Features Enabled:
    ✅ Authentication System
    ✅ POS Interface
-   ✅ Consolidated n8n Integration
+   ✅ Individual n8n Webhooks
    ✅ Google Sheets Backend
    ✅ Real-time Updates
    ✅ Stock Management
