@@ -139,8 +139,9 @@ class CoffeePOSServer {
     }
 
     initializeRoutes() {
-        // Health check
+        // Health check - both paths for compatibility
         this.app.get('/health', this.handleHealthCheck.bind(this));
+        this.app.get('/api/health', this.handleHealthCheck.bind(this));
         
         // Authentication routes
         this.app.post('/api/auth/login', this.handleLogin.bind(this));
