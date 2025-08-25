@@ -48,7 +48,7 @@ const CONFIG = {
  * Creates all necessary sheets with proper structure for n8n integration
  */
 function initializeCoffeePOSTemplate() {
-  console.log('🚀 Initializing Coffee POS Google Sheets Template...');
+  console.log('[DEBUG] Initializing Coffee POS Google Sheets Template...');
   
   try {
     // Get current spreadsheet
@@ -69,7 +69,7 @@ function initializeCoffeePOSTemplate() {
     // Create documentation sheet
     createDocumentationSheet();
     
-    console.log('✅ Coffee POS Template initialized successfully!');
+    console.log('[DEBUG] Coffee POS Template initialized successfully!');
     
     // Show completion message with next steps
     showCompletionDialog();
@@ -82,7 +82,7 @@ function initializeCoffeePOSTemplate() {
     };
     
   } catch (error) {
-    console.error('❌ Template initialization failed:', error);
+    console.error('[DEBUG] Template initialization failed:', error);
     Browser.msgBox('Error', 'Template initialization failed: ' + error.message, Browser.Buttons.OK);
     return { success: false, error: error.message };
   }
@@ -94,14 +94,14 @@ function initializeCoffeePOSTemplate() {
 function createRequiredSheets() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   
-  console.log('📋 Creating required sheets...');
+  console.log('[DEBUG] Creating required sheets...');
   
   // Settings Sheet - Key-value configuration
   createOrUpdateSheet(CONFIG.SHEETS.SETTINGS, [
     ['Setting', 'Value', 'Description', 'Type'],
     ['shopName', CONFIG.SHOP_NAME, 'Shop display name', 'string'],
     ['shopTagline', 'Fresh Coffee Daily', 'Shop tagline', 'string'],
-    ['logoEmoji', '☕', 'Shop logo emoji', 'string'],
+    ['logoEmoji', '[COFFEE]', 'Shop logo emoji', 'string'],
     ['currency', CONFIG.CURRENCY, 'Currency code', 'string'],
     ['taxRate', CONFIG.TAX_RATE, 'Tax rate (decimal)', 'number'],
     ['lowStockThreshold', 10, 'Default low stock threshold', 'number'],
@@ -160,7 +160,7 @@ function createRequiredSheets() {
     ['orderId', 'ingredientId', 'ingredientName', 'quantityOrdered', 'quantityReceived', 'unit', 'pricePerUnit', 'totalPrice', 'urgencyLevel', 'notes', 'lastModified']
   ]);
   
-  console.log('✅ All sheets created successfully');
+  console.log('[DEBUG] All sheets created successfully');
 }
 
 /**
@@ -172,7 +172,7 @@ function createOrUpdateSheet(sheetName, headers) {
   
   if (!sheet) {
     sheet = spreadsheet.insertSheet(sheetName);
-    console.log(`✅ Created sheet: ${sheetName}`);
+    console.log(`[DEBUG] Created sheet: ${sheetName}`);
   }
   
   // Add headers if sheet is empty
@@ -199,29 +199,29 @@ function createOrUpdateSheet(sheetName, headers) {
  */
 function setupSampleData() {
   if (!isSheetEmpty(CONFIG.SHEETS.PRODUCTS)) {
-    console.log('📊 Sample data already exists, skipping...');
+    console.log('[DEBUG] Sample data already exists, skipping...');
     return;
   }
   
-  console.log('📊 Setting up comprehensive sample data...');
+  console.log('[DEBUG] Setting up comprehensive sample data...');
   
   // Sample Products - Philippines coffee shop typical items
   const sampleProducts = [
-    ['espresso-single', 'Single Espresso', 'Rich, bold shot of premium espresso', 65, 'Coffee - Espresso', '☕', '', 50, 10, 'ESP-SGL', true, 'RCP-ESP', '1 shot', '', 'None', 2, 18.50, new Date()],
-    ['americano', 'Americano', 'Espresso with hot water', 85, 'Coffee - Espresso', '☕', '', 45, 10, 'AME-REG', true, 'RCP-AME', '1 cup', 'Regular,Large', 'None', 3, 22.00, new Date()],
-    ['latte', 'Café Latte', 'Espresso with steamed milk and foam', 120, 'Coffee - Milk Based', '🥛', '', 30, 10, 'LAT-REG', true, 'RCP-LAT', '1 cup', 'Regular,Large,Decaf,Oat Milk', 'Milk', 4, 35.50, new Date()],
-    ['cappuccino', 'Cappuccino', 'Perfect balance of espresso, steamed milk and foam', 115, 'Coffee - Milk Based', '☕', '', 25, 10, 'CAP-REG', true, 'RCP-CAP', '1 cup', 'Regular,Large,Dry', 'Milk', 4, 33.00, new Date()],
-    ['mocha', 'Café Mocha', 'Chocolate espresso drink with whipped cream', 135, 'Coffee - Specialty', '🍫', '', 20, 5, 'MOC-REG', true, 'RCP-MOC', '1 cup', 'Regular,Large,Dark Chocolate', 'Milk,Chocolate', 5, 42.00, new Date()],
-    ['frappuccino', 'Iced Frappuccino', 'Blended iced coffee drink', 150, 'Coffee - Cold', '🧊', '', 15, 5, 'FRA-REG', true, 'RCP-FRA', '1 cup', 'Vanilla,Caramel,Mocha,Coffee', 'Milk', 6, 45.00, new Date()],
-    ['iced-coffee', 'Iced Coffee', 'Cold brew served over ice', 95, 'Coffee - Cold', '🧊', '', 35, 10, 'ICE-COF', true, 'RCP-ICE', '1 cup', 'Black,With Milk,Sweet', 'None', 3, 28.00, new Date()],
-    ['hot-chocolate', 'Hot Chocolate', 'Rich Belgian chocolate drink', 110, 'Non-Coffee', '🍫', '', 25, 5, 'HOT-CHO', true, 'RCP-CHO', '1 cup', 'Regular,Dark,White Chocolate', 'Milk,Chocolate', 4, 35.00, new Date()],
-    ['chai-latte', 'Chai Tea Latte', 'Spiced tea blend with steamed milk', 125, 'Tea', '🍵', '', 20, 5, 'CHI-LAT', true, 'RCP-CHI', '1 cup', 'Regular,Iced,Extra Spice', 'Milk,Spices', 4, 38.00, new Date()],
-    ['matcha-latte', 'Matcha Latte', 'Premium Japanese green tea with milk', 140, 'Tea', '🍵', '', 15, 3, 'MAT-LAT', true, 'RCP-MAT', '1 cup', 'Regular,Iced,Sugar-free', 'Milk', 4, 48.00, new Date()],
-    ['croissant', 'Butter Croissant', 'Fresh baked buttery pastry', 75, 'Food - Pastry', '🥐', '', 12, 3, 'CRO-BUT', true, '', '1 piece', 'Plain,Almond,Chocolate', 'Gluten,Dairy', 0, 25.00, new Date()],
-    ['muffin-blueberry', 'Blueberry Muffin', 'Homemade muffin with fresh blueberries', 85, 'Food - Pastry', '🧁', '', 8, 2, 'MUF-BLU', true, '', '1 piece', 'Blueberry,Chocolate Chip,Banana Walnut', 'Gluten,Dairy,Eggs', 0, 30.00, new Date()],
-    ['sandwich-club', 'Club Sandwich', 'Triple-decker with chicken, bacon & vegetables', 165, 'Food - Sandwiches', '🥪', '', 5, 2, 'SAN-CLB', true, '', '1 piece', 'Club,BLT,Grilled Cheese,Tuna', 'Gluten,Dairy', 0, 85.00, new Date()],
-    ['salad-caesar', 'Caesar Salad', 'Fresh romaine with caesar dressing', 145, 'Food - Salads', '🥗', '', 8, 2, 'SAL-CAE', true, '', '1 bowl', 'Regular,Chicken,Shrimp', 'Dairy,Eggs', 0, 65.00, new Date()],
-    ['water-bottle', 'Bottled Water', 'Premium spring water', 25, 'Beverages - Non-Coffee', '💧', '', 50, 10, 'WAT-BOT', true, '', '500ml', 'Still,Sparkling', 'None', 0, 8.00, new Date()]
+    ['espresso-single', 'Single Espresso', 'Rich, bold shot of premium espresso', 65, 'Coffee - Espresso', '[COFFEE]', '', 50, 10, 'ESP-SGL', true, 'RCP-ESP', '1 shot', '', 'None', 2, 18.50, new Date()],
+    ['americano', 'Americano', 'Espresso with hot water', 85, 'Coffee - Espresso', '[COFFEE]', '', 45, 10, 'AME-REG', true, 'RCP-AME', '1 cup', 'Regular,Large', 'None', 3, 22.00, new Date()],
+    ['latte', 'Café Latte', 'Espresso with steamed milk and foam', 120, 'Coffee - Milk Based', '[MILK]', '', 30, 10, 'LAT-REG', true, 'RCP-LAT', '1 cup', 'Regular,Large,Decaf,Oat Milk', 'Milk', 4, 35.50, new Date()],
+    ['cappuccino', 'Cappuccino', 'Perfect balance of espresso, steamed milk and foam', 115, 'Coffee - Milk Based', '[COFFEE]', '', 25, 10, 'CAP-REG', true, 'RCP-CAP', '1 cup', 'Regular,Large,Dry', 'Milk', 4, 33.00, new Date()],
+    ['mocha', 'Café Mocha', 'Chocolate espresso drink with whipped cream', 135, 'Coffee - Specialty', '[CHOCOLATE]', '', 20, 5, 'MOC-REG', true, 'RCP-MOC', '1 cup', 'Regular,Large,Dark Chocolate', 'Milk,Chocolate', 5, 42.00, new Date()],
+    ['frappuccino', 'Iced Frappuccino', 'Blended iced coffee drink', 150, 'Coffee - Cold', '[ICE]', '', 15, 5, 'FRA-REG', true, 'RCP-FRA', '1 cup', 'Vanilla,Caramel,Mocha,Coffee', 'Milk', 6, 45.00, new Date()],
+    ['iced-coffee', 'Iced Coffee', 'Cold brew served over ice', 95, 'Coffee - Cold', '[ICE]', '', 35, 10, 'ICE-COF', true, 'RCP-ICE', '1 cup', 'Black,With Milk,Sweet', 'None', 3, 28.00, new Date()],
+    ['hot-chocolate', 'Hot Chocolate', 'Rich Belgian chocolate drink', 110, 'Non-Coffee', '[CHOCOLATE]', '', 25, 5, 'HOT-CHO', true, 'RCP-CHO', '1 cup', 'Regular,Dark,White Chocolate', 'Milk,Chocolate', 4, 35.00, new Date()],
+    ['chai-latte', 'Chai Tea Latte', 'Spiced tea blend with steamed milk', 125, 'Tea', '[TEA]', '', 20, 5, 'CHI-LAT', true, 'RCP-CHI', '1 cup', 'Regular,Iced,Extra Spice', 'Milk,Spices', 4, 38.00, new Date()],
+    ['matcha-latte', 'Matcha Latte', 'Premium Japanese green tea with milk', 140, 'Tea', '[TEA]', '', 15, 3, 'MAT-LAT', true, 'RCP-MAT', '1 cup', 'Regular,Iced,Sugar-free', 'Milk', 4, 48.00, new Date()],
+    ['croissant', 'Butter Croissant', 'Fresh baked buttery pastry', 75, 'Food - Pastry', '[PASTRY]', '', 12, 3, 'CRO-BUT', true, '', '1 piece', 'Plain,Almond,Chocolate', 'Gluten,Dairy', 0, 25.00, new Date()],
+    ['muffin-blueberry', 'Blueberry Muffin', 'Homemade muffin with fresh blueberries', 85, 'Food - Pastry', '[MUFFIN]', '', 8, 2, 'MUF-BLU', true, '', '1 piece', 'Blueberry,Chocolate Chip,Banana Walnut', 'Gluten,Dairy,Eggs', 0, 30.00, new Date()],
+    ['sandwich-club', 'Club Sandwich', 'Triple-decker with chicken, bacon & vegetables', 165, 'Food - Sandwiches', '[SANDWICH]', '', 5, 2, 'SAN-CLB', true, '', '1 piece', 'Club,BLT,Grilled Cheese,Tuna', 'Gluten,Dairy', 0, 85.00, new Date()],
+    ['salad-caesar', 'Caesar Salad', 'Fresh romaine with caesar dressing', 145, 'Food - Salads', '[SALAD]', '', 8, 2, 'SAL-CAE', true, '', '1 bowl', 'Regular,Chicken,Shrimp', 'Dairy,Eggs', 0, 65.00, new Date()],
+    ['water-bottle', 'Bottled Water', 'Premium spring water', 25, 'Beverages - Non-Coffee', '[WATER]', '', 50, 10, 'WAT-BOT', true, '', '500ml', 'Still,Sparkling', 'None', 0, 8.00, new Date()]
   ];
   
   addDataToSheet(CONFIG.SHEETS.PRODUCTS, sampleProducts);
@@ -283,7 +283,7 @@ function setupSampleData() {
   
   addDataToSheet(CONFIG.SHEETS.SUPPLIERS, sampleSuppliers);
   
-  console.log('✅ Comprehensive sample data setup complete');
+  console.log('[DEBUG] Comprehensive sample data setup complete');
 }
 
 /**
@@ -292,7 +292,7 @@ function setupSampleData() {
 function formatAllSheets() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   
-  console.log('🎨 Formatting sheets...');
+  console.log('[DEBUG] Formatting sheets...');
   
   Object.values(CONFIG.SHEETS).forEach(sheetName => {
     const sheet = spreadsheet.getSheetByName(sheetName);
@@ -313,7 +313,7 @@ function formatAllSheets() {
     }
   });
   
-  console.log('✅ Sheet formatting complete');
+  console.log('[DEBUG] Sheet formatting complete');
 }
 
 /**
@@ -321,18 +321,18 @@ function formatAllSheets() {
  */
 function createDocumentationSheet() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const docSheet = spreadsheet.insertSheet('📖 Setup Instructions', 0); // Insert as first sheet
+  const docSheet = spreadsheet.insertSheet('[DOCS] Setup Instructions', 0); // Insert as first sheet
   
   const instructions = [
     ['Coffee Shop POS - Setup Instructions', '', '', ''],
     ['', '', '', ''],
-    ['📋 What This Template Provides:', '', '', ''],
-    ['✅ Complete Google Sheets structure for Coffee Shop POS', '', '', ''],
-    ['✅ Sample data for immediate testing', '', '', ''],
-    ['✅ Philippines-specific business logic', '', '', ''],
-    ['✅ Ready for n8n workflow integration', '', '', ''],
+    ['[INFO] What This Template Provides:', '', '', ''],
+    ['[COMPLETE] Complete Google Sheets structure for Coffee Shop POS', '', '', ''],
+    ['[COMPLETE] Sample data for immediate testing', '', '', ''],
+    ['[COMPLETE] Philippines-specific business logic', '', '', ''],
+    ['[COMPLETE] Ready for n8n workflow integration', '', '', ''],
     ['', '', '', ''],
-    ['🔧 Next Steps:', '', '', ''],
+    ['[SETUP] Next Steps:', '', '', ''],
     ['1. Copy this Google Sheets ID: ' + spreadsheet.getId(), '', '', ''],
     ['2. Import the n8n workflow to your n8n instance', '', '', ''],
     ['3. Update the Google Sheets ID in all n8n nodes', '', '', ''],
@@ -340,7 +340,7 @@ function createDocumentationSheet() {
     ['5. Update webhook URLs in your frontend .env file', '', '', ''],
     ['6. Test the integration using the sample data', '', '', ''],
     ['', '', '', ''],
-    ['📊 Sheet Structure:', '', '', ''],
+    ['[INFO] Sheet Structure:', '', '', ''],
     ['• Settings - Shop configuration and preferences', '', '', ''],
     ['• Products - Your coffee and food menu items', '', '', ''],
     ['• Ingredients - Raw materials for cost tracking', '', '', ''],
@@ -352,13 +352,13 @@ function createDocumentationSheet() {
     ['• Purchase_Orders - Supplier order management', '', '', ''],
     ['• Purchase_Order_Items - Detailed order items', '', '', ''],
     ['', '', '', ''],
-    ['⚠️ Important Notes:', '', '', ''],
+    ['[WARNING] Important Notes:', '', '', ''],
     ['• Do not delete or rename sheet headers', '', '', ''],
     ['• The n8n workflow expects exact column names', '', '', ''],
     ['• Sample data can be modified or replaced', '', '', ''],
     ['• Keep the Settings sheet updated with your shop info', '', '', ''],
     ['', '', '', ''],
-    ['🆔 Spreadsheet Information:', '', '', ''],
+    ['[INFO] Spreadsheet Information:', '', '', ''],
     ['Spreadsheet ID: ' + spreadsheet.getId(), '', '', ''],
     ['Spreadsheet URL: ' + spreadsheet.getUrl(), '', '', ''],
     ['Created: ' + new Date().toLocaleString(), '', '', ''],
@@ -379,7 +379,7 @@ function createDocumentationSheet() {
   // Auto-resize columns
   docSheet.autoResizeColumns(1, 4);
   
-  console.log('✅ Documentation sheet created');
+  console.log('[DEBUG] Documentation sheet created');
 }
 
 /**
@@ -388,23 +388,23 @@ function createDocumentationSheet() {
 function showCompletionDialog() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   const message = `
-🎉 Coffee Shop POS Template Created Successfully!
+[SUCCESS] Coffee Shop POS Template Created Successfully!
 
-📋 Your Google Sheets is now ready with:
-✅ All required sheets and headers
-✅ Sample data for testing
-✅ Philippines business formatting
-✅ n8n workflow compatibility
+[INFO] Your Google Sheets is now ready with:
+[COMPLETE] All required sheets and headers
+[COMPLETE] Sample data for testing
+[COMPLETE] Philippines business formatting
+[COMPLETE] n8n workflow compatibility
 
-🔧 Next Steps:
+[SETUP] Next Steps:
 1. Copy this Spreadsheet ID: ${spreadsheet.getId()}
 2. Import the n8n workflow 
 3. Update Google Sheets ID in n8n nodes
 4. Configure credentials and test
 
-📖 Check the "Setup Instructions" sheet for detailed guidance.
+[DOCS] Check the "Setup Instructions" sheet for detailed guidance.
 
-Ready to build your Coffee Shop POS system! ☕
+Ready to build your Coffee Shop POS system! [COFFEE]
   `;
   
   Browser.msgBox('Setup Complete!', message, Browser.Buttons.OK);
@@ -461,7 +461,7 @@ function resetSampleData() {
  * Utility function to validate sheet structure for n8n compatibility
  */
 function validateSheetStructure() {
-  console.log('🔍 Validating sheet structure for n8n compatibility...');
+  console.log('[DEBUG] Validating sheet structure for n8n compatibility...');
   
   const results = [];
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -479,12 +479,12 @@ function validateSheetStructure() {
     const sheet = spreadsheet.getSheetByName(sheetName);
     
     if (!sheet) {
-      results.push(`❌ Sheet missing: ${sheetName}`);
+      results.push(`[ERROR] Sheet missing: ${sheetName}`);
       return;
     }
     
     if (sheet.getLastRow() === 0) {
-      results.push(`⚠️ Sheet empty: ${sheetName}`);
+      results.push(`[WARNING] Sheet empty: ${sheetName}`);
       return;
     }
     
@@ -492,9 +492,9 @@ function validateSheetStructure() {
     const missingHeaders = expectedCols.filter(col => !actualHeaders.includes(col));
     
     if (missingHeaders.length > 0) {
-      results.push(`❌ ${sheetName} missing columns: ${missingHeaders.join(', ')}`);
+      results.push(`[ERROR] ${sheetName} missing columns: ${missingHeaders.join(', ')}`);
     } else {
-      results.push(`✅ ${sheetName} structure valid`);
+      results.push(`[VALID] ${sheetName} structure valid`);
     }
   });
   
@@ -542,7 +542,7 @@ function generateN8NConfig() {
   };
   
   // Create a new sheet with the config
-  const configSheet = spreadsheet.insertSheet('🔧 n8n Configuration');
+  const configSheet = spreadsheet.insertSheet('[CONFIG] n8n Configuration');
   
   const configData = [
     ['Coffee Shop POS - n8n Configuration', '', ''],
@@ -572,12 +572,12 @@ function generateN8NConfig() {
     ['N8N_DASHBOARD_WEBHOOK=https://your-n8n.com/webhook/dashboard-stats', '', ''],
     ['', '', ''],
     ['Setup Status:', '', ''],
-    ['✅ Google Sheets template created', '', ''],
-    ['⏳ Import n8n workflow', '', ''],
-    ['⏳ Configure Google Sheets credentials', '', ''],
-    ['⏳ Update spreadsheet ID in n8n nodes', '', ''],
-    ['⏳ Test webhook endpoints', '', ''],
-    ['⏳ Deploy frontend with webhook URLs', '', '']
+    ['[COMPLETE] Google Sheets template created', '', ''],
+    ['[PENDING] Import n8n workflow', '', ''],
+    ['[PENDING] Configure Google Sheets credentials', '', ''],
+    ['[PENDING] Update spreadsheet ID in n8n nodes', '', ''],
+    ['[PENDING] Test webhook endpoints', '', ''],
+    ['[PENDING] Deploy frontend with webhook URLs', '', '']
   ];
   
   configSheet.getRange(1, 1, configData.length, 3).setValues(configData);
@@ -675,14 +675,14 @@ function createSampleOrder() {
  */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('☕ Coffee POS Setup')
-    .addItem('🚀 Initialize Template', 'initializeCoffeePOSTemplate')
+  ui.createMenu('[COFFEE] Coffee POS Setup')
+    .addItem('[INIT] Initialize Template', 'initializeCoffeePOSTemplate')
     .addSeparator()
-    .addItem('🔧 Generate n8n Config', 'generateN8NConfig')
-    .addItem('🔍 Validate Structure', 'validateSheetStructure')
+    .addItem('[CONFIG] Generate n8n Config', 'generateN8NConfig')
+    .addItem('[CHECK] Validate Structure', 'validateSheetStructure')
     .addSeparator()
-    .addItem('📊 Reset Sample Data', 'resetSampleData')
-    .addItem('🧪 Create Test Order', 'createSampleOrder')
+    .addItem('[DATA] Reset Sample Data', 'resetSampleData')
+    .addItem('[TEST] Create Test Order', 'createSampleOrder')
     .addToUi();
 }
 

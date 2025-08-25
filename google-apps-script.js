@@ -123,18 +123,18 @@ function createProductsSheet(spreadsheet) {
   
   // Sample products data
   const products = [
-    ['espresso-single', 'Single Espresso', 'Rich, bold shot', 65, 'Coffee - Espresso', '☕', 50, 10, 'TRUE', 18.50, ''],
-    ['americano', 'Americano', 'Espresso with hot water', 85, 'Coffee - Espresso', '☕', 45, 10, 'TRUE', 22.00, 'Regular,Large'],
-    ['latte', 'Latte', 'Espresso with steamed milk', 120, 'Coffee - Milk Based', '🥛', 30, 10, 'TRUE', 35.50, 'Regular,Large,Decaf'],
-    ['cappuccino', 'Cappuccino', 'Espresso with steamed milk foam', 115, 'Coffee - Milk Based', '☕', 25, 10, 'TRUE', 33.00, 'Regular,Large,Extra Foam'],
-    ['mocha', 'Mocha', 'Chocolate espresso drink', 135, 'Coffee - Specialty', '🍫', 20, 5, 'TRUE', 42.00, 'Regular,Large,Extra Chocolate'],
-    ['frappuccino', 'Frappuccino', 'Iced blended coffee drink', 150, 'Coffee - Cold', '🧊', 15, 5, 'TRUE', 45.00, 'Vanilla,Caramel,Mocha'],
-    ['iced-coffee', 'Iced Coffee', 'Cold brew coffee', 95, 'Coffee - Cold', '🧊', 35, 10, 'TRUE', 28.00, 'Regular,Large,With Milk'],
-    ['hot-chocolate', 'Hot Chocolate', 'Rich chocolate drink', 110, 'Non-Coffee', '🍫', 25, 5, 'TRUE', 35.00, 'Regular,Large,Extra Marshmallows'],
-    ['chai-latte', 'Chai Latte', 'Spiced tea with milk', 125, 'Tea', '🍵', 20, 5, 'TRUE', 38.00, 'Regular,Large,Iced'],
-    ['croissant', 'Butter Croissant', 'Fresh baked pastry', 75, 'Food', '🥐', 12, 3, 'TRUE', 25.00, ''],
-    ['muffin', 'Blueberry Muffin', 'Homemade muffin', 85, 'Food', '🧁', 8, 2, 'TRUE', 30.00, 'Blueberry,Chocolate Chip,Banana'],
-    ['sandwich', 'Club Sandwich', 'Fresh sandwich', 165, 'Food', '🥪', 5, 2, 'TRUE', 85.00, 'Club,BLT,Grilled Cheese']
+    ['espresso-single', 'Single Espresso', 'Rich, bold shot', 65, 'Coffee - Espresso', '[COFFEE]', 50, 10, 'TRUE', 18.50, ''],
+    ['americano', 'Americano', 'Espresso with hot water', 85, 'Coffee - Espresso', '[COFFEE]', 45, 10, 'TRUE', 22.00, 'Regular,Large'],
+    ['latte', 'Latte', 'Espresso with steamed milk', 120, 'Coffee - Milk Based', '[MILK]', 30, 10, 'TRUE', 35.50, 'Regular,Large,Decaf'],
+    ['cappuccino', 'Cappuccino', 'Espresso with steamed milk foam', 115, 'Coffee - Milk Based', '[COFFEE]', 25, 10, 'TRUE', 33.00, 'Regular,Large,Extra Foam'],
+    ['mocha', 'Mocha', 'Chocolate espresso drink', 135, 'Coffee - Specialty', '[CHOCOLATE]', 20, 5, 'TRUE', 42.00, 'Regular,Large,Extra Chocolate'],
+    ['frappuccino', 'Frappuccino', 'Iced blended coffee drink', 150, 'Coffee - Cold', '[ICE]', 15, 5, 'TRUE', 45.00, 'Vanilla,Caramel,Mocha'],
+    ['iced-coffee', 'Iced Coffee', 'Cold brew coffee', 95, 'Coffee - Cold', '[ICE]', 35, 10, 'TRUE', 28.00, 'Regular,Large,With Milk'],
+    ['hot-chocolate', 'Hot Chocolate', 'Rich chocolate drink', 110, 'Non-Coffee', '[CHOCOLATE]', 25, 5, 'TRUE', 35.00, 'Regular,Large,Extra Marshmallows'],
+    ['chai-latte', 'Chai Latte', 'Spiced tea with milk', 125, 'Tea', '[TEA]', 20, 5, 'TRUE', 38.00, 'Regular,Large,Iced'],
+    ['croissant', 'Butter Croissant', 'Fresh baked pastry', 75, 'Food', '[PASTRY]', 12, 3, 'TRUE', 25.00, ''],
+    ['muffin', 'Blueberry Muffin', 'Homemade muffin', 85, 'Food', '[MUFFIN]', 8, 2, 'TRUE', 30.00, 'Blueberry,Chocolate Chip,Banana'],
+    ['sandwich', 'Club Sandwich', 'Fresh sandwich', 165, 'Food', '[SANDWICH]', 5, 2, 'TRUE', 85.00, 'Club,BLT,Grilled Cheese']
   ];
   
   sheet.getRange(2, 1, products.length, products[0].length).setValues(products);
@@ -160,7 +160,7 @@ function createSettingsSheet(spreadsheet) {
   const settings = [
     ['shopName', 'Coffee Paradise', 'Name of your coffee shop'],
     ['shopTagline', 'Fresh Coffee Daily', 'Shop tagline/slogan'],
-    ['logoEmoji', '☕', 'Emoji to use as logo'],
+    ['logoEmoji', '[COFFEE]', 'Emoji to use as logo'],
     ['currency', 'PHP', 'Currency symbol'],
     ['taxRate', '0.12', 'Tax rate (12% VAT in Philippines)'],
     ['lowStockThreshold', '10', 'Default low stock threshold'],

@@ -10,8 +10,17 @@ require('dotenv').config();
 
 class CoffeePOSServer {
     constructor() {
+        console.log('[DEBUG] CoffeePOSServer constructor - Starting server initialization');
+        console.log('[DEBUG] Environment variables:', {
+            NODE_ENV: process.env.NODE_ENV,
+            PORT: process.env.PORT,
+            RAILWAY_PORT: process.env.RAILWAY_PORT,
+            SHOP_NAME: process.env.SHOP_NAME
+        });
+        
         this.app = express();
         this.port = process.env.PORT || process.env.RAILWAY_PORT || 3000;
+        console.log('[DEBUG] Server port determined:', this.port);
         
         // n8n webhook URLs - Individual Endpoints
         this.n8nWebhooks = {
@@ -25,6 +34,7 @@ class CoffeePOSServer {
             ingredientUsage: process.env.N8N_INGREDIENT_USAGE_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/ingredient-usage',
             generatePurchaseOrder: process.env.N8N_PURCHASE_ORDER_WEBHOOK || 'https://primary-production-3ef2.up.railway.app/webhook/generate-purchase-order'
         };
+        console.log('[DEBUG] n8n webhook URLs configured:', Object.keys(this.n8nWebhooks));
         
         // Configuration
         this.config = {
@@ -34,9 +44,19 @@ class CoffeePOSServer {
             jwtSecret: process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex'),
             environment: process.env.NODE_ENV || 'development'
         };
+        console.log('[DEBUG] Server configuration:', {
+            shopName: this.config.shopName,
+            currency: this.config.currency,
+            taxRate: this.config.taxRate,
+            environment: this.config.environment,
+            jwtSecretLength: this.config.jwtSecret.length
+        });
         
+        console.log('[DEBUG] Initializing middleware...');
         this.initializeMiddleware();
+        console.log('[DEBUG] Initializing routes...');
         this.initializeRoutes();
+        console.log('[DEBUG] CoffeePOSServer constructor - Initialization complete');
     }
 
     initializeMiddleware() {
@@ -85,10 +105,33 @@ class CoffeePOSServer {
         const start = Date.now();
         const timestamp = new Date().toISOString();
         
+        console.log(`[DEBUG] ${timestamp} - Incoming ${req.method} ${req.url}`);
+        console.log(`[DEBUG] Request headers:`, {
+            userAgent: req.get('User-Agent'),
+            contentType: req.get('Content-Type'),
+            authorization: req.get('Authorization') ? '[PRESENT]' : '[NONE]',
+            origin: req.get('Origin')
+        });
+        
+        if (req.body && Object.keys(req.body).length > 0) {
+            if (req.body.password) {
+                console.log('[DEBUG] Request body (password hidden):', { ...req.body, password: '[HIDDEN]' });
+            } else {
+                console.log('[DEBUG] Request body:', req.body);
+            }
+        }
+        
         res.on('finish', () => {
             const duration = Date.now() - start;
-            if (this.config.environment === 'development') {
-                console.log(`${req.method} ${req.url} - ${res.statusCode} - ${duration}ms`);
+            const logLevel = res.statusCode >= 400 ? '[ERROR]' : '[DEBUG]';
+            console.log(`${logLevel} ${req.method} ${req.url} - ${res.statusCode} - ${duration}ms`);
+            
+            if (res.statusCode >= 400) {
+                console.log(`[ERROR] Error response details:`, {
+                    statusCode: res.statusCode,
+                    statusMessage: res.statusMessage,
+                    contentType: res.get('Content-Type')
+                });
             }
         });
         
@@ -125,10 +168,17 @@ class CoffeePOSServer {
 
     // Authentication middleware (simplified)
     authenticateToken(req, res, next) {
+        console.log('[DEBUG] authenticateToken - Function start');
+        console.log('[DEBUG] authenticateToken - Request URL:', req.url);
+        
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
         
+        console.log('[DEBUG] authenticateToken - Auth header present:', !!authHeader);
+        console.log('[DEBUG] authenticateToken - Token extracted:', !!token);
+        
         if (!token) {
+            console.warn('[DEBUG] authenticateToken - No token provided');
             return res.status(401).json({
                 success: false,
                 message: 'Access token required'
@@ -136,10 +186,19 @@ class CoffeePOSServer {
         }
         
         try {
+            console.log('[DEBUG] authenticateToken - Verifying token');
             const decoded = this.verifyToken(token);
             req.user = decoded;
+            
+            console.log('[DEBUG] authenticateToken - Token valid, user authenticated:', {
+                userId: decoded.id,
+                username: decoded.username,
+                role: decoded.role
+            });
+            
             next();
         } catch (error) {
+            console.error('[DEBUG] authenticateToken - Token verification failed:', error.message);
             return res.status(403).json({
                 success: false,
                 message: 'Invalid or expired token'
@@ -167,33 +226,63 @@ class CoffeePOSServer {
     }
 
     verifyToken(token) {
+        console.log('[DEBUG] verifyToken - Function start');
+        console.log('[DEBUG] verifyToken - Token length:', token.length);
+        
         const parts = token.split('.');
+        console.log('[DEBUG] verifyToken - Token parts count:', parts.length);
+        
         if (parts.length !== 3) {
+            console.error('[DEBUG] verifyToken - Invalid token format, expected 3 parts');
             throw new Error('Invalid token format');
         }
         
         const [header, payload, signature] = parts;
+        console.log('[DEBUG] verifyToken - Token parts lengths:', {
+            header: header.length,
+            payload: payload.length,
+            signature: signature.length
+        });
+        
         const expectedSignature = crypto
             .createHmac('sha256', this.config.jwtSecret)
             .update(`${header}.${payload}`)
             .digest('base64url');
         
+        console.log('[DEBUG] verifyToken - Signature verification:', {
+            provided: signature.substring(0, 10) + '...',
+            expected: expectedSignature.substring(0, 10) + '...'
+        });
+        
         if (signature !== expectedSignature) {
+            console.error('[DEBUG] verifyToken - Signature mismatch');
             throw new Error('Invalid token signature');
         }
         
+        console.log('[DEBUG] verifyToken - Decoding payload');
         const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString());
         
-        if (decoded.exp < Math.floor(Date.now() / 1000)) {
+        const currentTime = Math.floor(Date.now() / 1000);
+        console.log('[DEBUG] verifyToken - Token expiry check:', {
+            tokenExp: decoded.exp,
+            currentTime: currentTime,
+            isExpired: decoded.exp < currentTime
+        });
+        
+        if (decoded.exp < currentTime) {
+            console.error('[DEBUG] verifyToken - Token expired');
             throw new Error('Token expired');
         }
         
+        console.log('[DEBUG] verifyToken - Token valid for user:', decoded.username);
         return decoded;
     }
 
     // Route handlers - Updated for Consolidated n8n Webhooks
     handleHealthCheck(req, res) {
-        res.status(200).json({
+        console.log('[DEBUG] handleHealthCheck - Function start');
+        
+        const healthData = {
             success: true,
             status: 'healthy',
             timestamp: new Date().toISOString(),
@@ -202,14 +291,30 @@ class CoffeePOSServer {
             version: '1.0.0',
             port: this.port,
             ready: true
+        };
+        
+        console.log('[DEBUG] handleHealthCheck - Health check data:', {
+            status: healthData.status,
+            uptime: Math.floor(healthData.uptime),
+            environment: healthData.environment,
+            port: healthData.port
         });
+        
+        res.status(200).json(healthData);
+        
+        console.log('[DEBUG] handleHealthCheck - Health check completed');
     }
 
     async handleLogin(req, res) {
+        console.log('[DEBUG] handleLogin - Function start');
+        const startTime = Date.now();
+        
         try {
             const { username, password } = req.body;
+            console.log('[DEBUG] handleLogin - Login attempt for username:', username);
             
             if (!username || !password) {
+                console.warn('[DEBUG] handleLogin - Missing credentials');
                 return res.status(400).json({
                     success: false,
                     message: 'Username and password required'
@@ -222,28 +327,50 @@ class CoffeePOSServer {
                 { id: 2, username: 'staff', password: 'staff123', role: 'staff', name: 'Staff Member' },
                 { id: 3, username: 'manager', password: 'manager123', role: 'manager', name: 'Store Manager' }
             ];
+            console.log('[DEBUG] handleLogin - Available users:', demoUsers.map(u => u.username));
             
             const user = demoUsers.find(u => u.username === username && u.password === password);
             
             if (!user) {
+                console.warn('[DEBUG] handleLogin - Invalid credentials for username:', username);
                 return res.status(401).json({
                     success: false,
                     message: 'Invalid credentials'
                 });
             }
             
+            console.log('[DEBUG] handleLogin - User authenticated:', {
+                id: user.id,
+                username: user.username,
+                role: user.role,
+                name: user.name
+            });
+            
+            console.log('[DEBUG] handleLogin - Generating JWT token');
             const token = this.generateToken(user);
             const { password: _, ...userWithoutPassword } = user;
             
-            res.json({
+            const response = {
                 success: true,
                 token,
                 user: userWithoutPassword,
                 message: 'Login successful'
-            });
+            };
+            
+            console.log('[DEBUG] handleLogin - Login successful for user:', username);
+            const endTime = Date.now();
+            console.log(`[DEBUG] handleLogin - Authentication completed in ${endTime - startTime}ms`);
+            
+            res.json(response);
             
         } catch (error) {
-            console.error('Login error:', error);
+            const endTime = Date.now();
+            console.error(`[DEBUG] handleLogin - Login error after ${endTime - startTime}ms:`, error);
+            console.error('[DEBUG] handleLogin - Error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
             res.status(500).json({
                 success: false,
                 message: 'Internal server error'
@@ -252,60 +379,108 @@ class CoffeePOSServer {
     }
 
     handleLogout(req, res) {
+        console.log('[DEBUG] handleLogout - Function start');
+        console.log('[DEBUG] handleLogout - User logging out:', {
+            userId: req.user?.id,
+            username: req.user?.username,
+            role: req.user?.role
+        });
+        
         res.json({
             success: true,
             message: 'Logged out successfully'
         });
+        
+        console.log('[DEBUG] handleLogout - Logout successful');
     }
 
     async handleGetSettings(req, res) {
+        console.log('[DEBUG] handleGetSettings - Function start');
+        const startTime = Date.now();
+        
         try {
-            // Call individual settings webhook
+            console.log('[DEBUG] handleGetSettings - Calling n8n settings webhook:', this.n8nWebhooks.getSettings);
             const response = await this.callN8NWebhook(this.n8nWebhooks.getSettings, 'GET');
+            const endTime = Date.now();
+            
+            console.log(`[DEBUG] handleGetSettings - Webhook response received in ${endTime - startTime}ms:`, {
+                success: response?.success,
+                hasSettings: !!response?.settings
+            });
             
             if (response && response.success) {
+                console.log('[DEBUG] handleGetSettings - Returning webhook settings');
                 return res.json(response);
             }
             
-            // Fallback to default settings
+            console.log('[DEBUG] handleGetSettings - Webhook unsuccessful, using default settings');
+            const defaultSettings = this.getDefaultSettings();
             res.json({
                 success: true,
-                settings: this.getDefaultSettings()
+                settings: defaultSettings
             });
             
         } catch (webhookError) {
-            console.log('n8n settings webhook not available, using default settings:', webhookError.message);
+            const endTime = Date.now();
+            console.log(`[DEBUG] handleGetSettings - Webhook error after ${endTime - startTime}ms:`, webhookError.message);
+            console.log('[DEBUG] handleGetSettings - Using default settings fallback');
+            
+            const defaultSettings = this.getDefaultSettings();
+            console.log('[DEBUG] handleGetSettings - Default settings:', Object.keys(defaultSettings));
             
             res.json({
                 success: true,
-                settings: this.getDefaultSettings()
+                settings: defaultSettings
             });
         }
     }
 
     async handleGetProducts(req, res) {
+        console.log('[DEBUG] handleGetProducts - Function start');
+        const startTime = Date.now();
+        
         try {
-            // Call individual products webhook
+            console.log('[DEBUG] handleGetProducts - Calling n8n products webhook:', this.n8nWebhooks.getProducts);
             const response = await this.callN8NWebhook(this.n8nWebhooks.getProducts, 'GET');
+            const endTime = Date.now();
+            
+            console.log(`[DEBUG] handleGetProducts - Webhook response received in ${endTime - startTime}ms:`, {
+                success: response?.success,
+                hasProducts: !!response?.products,
+                productCount: response?.products?.length || 0
+            });
             
             if (response && response.success) {
+                console.log('[DEBUG] handleGetProducts - Returning webhook products:', response.products.length, 'products');
                 return res.json(response);
             }
             
-            // Fallback to demo products
+            console.log('[DEBUG] handleGetProducts - Webhook unsuccessful, using demo products');
             const demoProducts = this.getDemoProducts();
-            res.json({
+            const response_data = {
                 success: true,
                 products: demoProducts,
                 lastUpdate: new Date().toISOString(),
                 totalProducts: demoProducts.length,
                 activeProducts: demoProducts.length
+            };
+            console.log('[DEBUG] handleGetProducts - Demo products response:', {
+                productCount: demoProducts.length,
+                firstProduct: demoProducts[0]?.name
             });
+            res.json(response_data);
             
         } catch (webhookError) {
-            console.log('n8n products webhook not available, using demo products:', webhookError.message);
+            const endTime = Date.now();
+            console.log(`[DEBUG] handleGetProducts - Webhook error after ${endTime - startTime}ms:`, webhookError.message);
+            console.log('[DEBUG] handleGetProducts - Error details:', {
+                name: webhookError.name,
+                message: webhookError.message
+            });
             
             const demoProducts = this.getDemoProducts();
+            console.log('[DEBUG] handleGetProducts - Using demo products fallback:', demoProducts.length, 'products');
+            
             res.json({
                 success: true,
                 products: demoProducts,
@@ -333,6 +508,9 @@ class CoffeePOSServer {
     }
 
     async handleProcessOrder(req, res) {
+        console.log('[DEBUG] handleProcessOrder - Function start');
+        const startTime = Date.now();
+        
         try {
             const orderData = {
                 ...req.body,
@@ -341,12 +519,32 @@ class CoffeePOSServer {
                 timestamp: new Date().toISOString()
             };
             
+            console.log('[DEBUG] handleProcessOrder - Order data prepared:', {
+                itemCount: orderData.items?.length || 0,
+                total: orderData.total,
+                paymentMethod: orderData.paymentMethod,
+                cashier: orderData.cashier,
+                cashierId: orderData.cashierId
+            });
+            
+            console.log('[DEBUG] handleProcessOrder - Items in order:', 
+                orderData.items?.map(item => ({ name: item.name, quantity: item.quantity })) || []
+            );
+            
             // Try to call n8n webhook to process order
             try {
+                console.log('[DEBUG] handleProcessOrder - Calling n8n process order webhook');
                 const response = await this.callN8NWebhook(this.n8nWebhooks.processOrder, 'POST', orderData);
+                const webhookTime = Date.now();
+                
+                console.log(`[DEBUG] handleProcessOrder - Webhook response received in ${webhookTime - startTime}ms:`, {
+                    success: response?.success,
+                    orderId: response?.orderId,
+                    hasLowStockAlert: !!response?.lowStockAlert
+                });
                 
                 if (response && response.success) {
-                    return res.json({
+                    const responseData = {
                         success: true,
                         orderId: response.orderId,
                         total: response.total || orderData.total,
@@ -354,17 +552,20 @@ class CoffeePOSServer {
                         lowStockAlert: response.lowStockAlert || false,
                         lowStockCount: response.lowStockCount || 0,
                         emailSent: response.emailSent || false
-                    });
+                    };
+                    console.log('[DEBUG] handleProcessOrder - Order processed via webhook:', responseData.orderId);
+                    return res.json(responseData);
                 }
             } catch (webhookError) {
-                console.log('n8n webhook not available, processing order locally:', webhookError.message);
+                console.log('[DEBUG] handleProcessOrder - Webhook error:', webhookError.message);
+                console.log('[DEBUG] handleProcessOrder - Processing order locally as fallback');
             }
             
             // Fallback: Process order locally without n8n
             const orderId = 'ORD-' + Date.now();
-            console.log('Order processed locally:', orderId);
+            console.log('[DEBUG] handleProcessOrder - Generated local order ID:', orderId);
             
-            res.json({
+            const localResponse = {
                 success: true,
                 orderId: orderId,
                 total: orderData.total,
@@ -372,10 +573,20 @@ class CoffeePOSServer {
                 lowStockAlert: false,
                 lowStockCount: 0,
                 emailSent: false
-            });
+            };
+            
+            const endTime = Date.now();
+            console.log(`[DEBUG] handleProcessOrder - Order processed locally in ${endTime - startTime}ms`);
+            res.json(localResponse);
             
         } catch (error) {
-            console.error('Process order error:', error);
+            const endTime = Date.now();
+            console.error(`[DEBUG] handleProcessOrder - Order processing error after ${endTime - startTime}ms:`, error);
+            console.error('[DEBUG] handleProcessOrder - Error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
             res.status(500).json({
                 success: false,
                 message: 'Failed to process order'
@@ -503,6 +714,15 @@ class CoffeePOSServer {
     }
 
     async callN8NWebhook(url, method = 'GET', data = null) {
+        console.log('[DEBUG] callN8NWebhook - Function start');
+        console.log('[DEBUG] callN8NWebhook - Parameters:', {
+            url: url,
+            method: method,
+            hasData: !!data,
+            dataType: data ? typeof data : 'none'
+        });
+        
+        const startTime = Date.now();
         const options = {
             method,
             headers: {
@@ -512,18 +732,51 @@ class CoffeePOSServer {
         
         if (data && method !== 'GET') {
             options.body = JSON.stringify(data);
+            console.log('[DEBUG] callN8NWebhook - Request body size:', options.body.length, 'characters');
         } else if (data && method === 'GET') {
             const params = new URLSearchParams(data);
             url += `?${params}`;
+            console.log('[DEBUG] callN8NWebhook - GET parameters added to URL');
         }
         
-        const response = await fetch(url, options);
+        console.log('[DEBUG] callN8NWebhook - Making request to:', url);
         
-        if (!response.ok) {
-            throw new Error(`n8n webhook call failed: ${response.status}`);
+        try {
+            const response = await fetch(url, options);
+            const fetchTime = Date.now();
+            
+            console.log(`[DEBUG] callN8NWebhook - Response received in ${fetchTime - startTime}ms`);
+            console.log('[DEBUG] callN8NWebhook - Response status:', response.status, response.statusText);
+            console.log('[DEBUG] callN8NWebhook - Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            if (!response.ok) {
+                console.error(`[DEBUG] callN8NWebhook - HTTP error: ${response.status} ${response.statusText}`);
+                throw new Error(`n8n webhook call failed: ${response.status}`);
+            }
+            
+            console.log('[DEBUG] callN8NWebhook - Parsing JSON response');
+            const jsonData = await response.json();
+            const totalTime = Date.now();
+            
+            console.log(`[DEBUG] callN8NWebhook - JSON parsed successfully, total time: ${totalTime - startTime}ms`);
+            console.log('[DEBUG] callN8NWebhook - Response data structure:', {
+                type: typeof jsonData,
+                keys: Object.keys(jsonData),
+                hasSuccess: 'success' in jsonData,
+                success: jsonData.success
+            });
+            
+            return jsonData;
+        } catch (error) {
+            const endTime = Date.now();
+            console.error(`[DEBUG] callN8NWebhook - Request failed after ${endTime - startTime}ms:`, error.message);
+            console.error('[DEBUG] callN8NWebhook - Error details:', {
+                name: error.name,
+                message: error.message,
+                type: error.constructor.name
+            });
+            throw error;
         }
-        
-        return response.json();
     }
 
     // Demo data methods
@@ -605,11 +858,26 @@ class CoffeePOSServer {
     }
 
     errorHandler(error, req, res, next) {
-        console.error('Server error:', error);
+        console.error('[DEBUG] errorHandler - Unhandled error occurred');
+        console.error('[DEBUG] errorHandler - Error details:', {
+            name: error.name,
+            message: error.message,
+            status: error.status,
+            stack: error.stack
+        });
+        console.error('[DEBUG] errorHandler - Request details:', {
+            method: req.method,
+            url: req.url,
+            userAgent: req.get('User-Agent'),
+            ip: req.ip
+        });
         
         const isDevelopment = this.config.environment === 'development';
+        const statusCode = error.status || 500;
         
-        res.status(error.status || 500).json({
+        console.error(`[DEBUG] errorHandler - Sending ${statusCode} error response`);
+        
+        res.status(statusCode).json({
             success: false,
             message: error.message || 'Internal server error',
             ...(isDevelopment && { stack: error.stack })
