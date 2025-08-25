@@ -1243,24 +1243,6 @@ class CoffeePOS {
         ];
     }
 
-    // Utility methods for local storage fallback
-    saveToLocalStorage(key, data) {
-        try {
-            localStorage.setItem(`coffeepos_${key}`, JSON.stringify(data));
-        } catch (error) {
-            console.warn('Failed to save to localStorage:', error);
-        }
-    }
-
-    loadFromLocalStorage(key) {
-        try {
-            const data = localStorage.getItem(`coffeepos_${key}`);
-            return data ? JSON.parse(data) : null;
-        } catch (error) {
-            console.warn('Failed to load from localStorage:', error);
-            return null;
-        }
-    }
 
     // Network retry logic
     async retryOperation(operation, maxRetries = 3) {
