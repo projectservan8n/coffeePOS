@@ -137,53 +137,125 @@
 
         <!-- Admin Dashboard (Toggle) -->
         <div id="adminDashboard" class="admin-dashboard hidden">
-            <div class="dashboard-header">
-                <h2>Admin Dashboard</h2>
-                <button id="closeDashboard" class="close-dashboard-btn">×</button>
-            </div>
-            
-            <div class="dashboard-content">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>Today's Sales</h3>
-                        <p class="stat-value" id="todaySales">₱0.00</p>
+            <div class="dashboard-overlay">
+                <div class="dashboard-container">
+                    <div class="dashboard-header">
+                        <div class="header-content">
+                            <h2>[ADMIN] Dashboard</h2>
+                            <div class="dashboard-subtitle">Real-time business analytics</div>
+                        </div>
+                        <button id="closeDashboard" class="close-dashboard-btn">×</button>
                     </div>
-                    <div class="stat-card">
-                        <h3>Today's Orders</h3>
-                        <p class="stat-value" id="todayOrders">0</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Average Order</h3>
-                        <p class="stat-value" id="avgOrder">₱0.00</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Profit Margin</h3>
-                        <p class="stat-value" id="profitMargin">0%</p>
-                    </div>
-                </div>
+                    
+                    <div class="dashboard-content">
+                        <!-- Enhanced Stats Grid -->
+                        <div class="stats-grid">
+                            <div class="stat-card revenue">
+                                <div class="stat-icon">[SALES]</div>
+                                <div class="stat-info">
+                                    <h3>Today's Revenue</h3>
+                                    <p class="stat-value" id="todaySales">₱0.00</p>
+                                    <span class="stat-trend" id="salesTrend">+0%</span>
+                                </div>
+                            </div>
+                            <div class="stat-card orders">
+                                <div class="stat-icon">[ORDERS]</div>
+                                <div class="stat-info">
+                                    <h3>Total Orders</h3>
+                                    <p class="stat-value" id="todayOrders">0</p>
+                                    <span class="stat-trend" id="ordersTrend">+0%</span>
+                                </div>
+                            </div>
+                            <div class="stat-card average">
+                                <div class="stat-icon">[AVG]</div>
+                                <div class="stat-info">
+                                    <h3>Average Order</h3>
+                                    <p class="stat-value" id="avgOrder">₱0.00</p>
+                                    <span class="stat-trend" id="avgTrend">+0%</span>
+                                </div>
+                            </div>
+                            <div class="stat-card profit">
+                                <div class="stat-icon">[PROFIT]</div>
+                                <div class="stat-info">
+                                    <h3>Profit Margin</h3>
+                                    <p class="stat-value" id="profitMargin">0%</p>
+                                    <span class="stat-trend" id="profitTrend">+0%</span>
+                                </div>
+                            </div>
+                        </div>
 
-                <div class="charts-section">
-                    <div class="chart-container">
-                        <h3>Sales Over Time</h3>
-                        <canvas id="salesChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <h3>Top Products</h3>
-                        <canvas id="productsChart"></canvas>
-                    </div>
-                </div>
+                        <!-- Enhanced Charts Section -->
+                        <div class="charts-section">
+                            <div class="chart-container sales-chart">
+                                <div class="chart-header">
+                                    <h3>Sales Analytics</h3>
+                                    <div class="chart-controls">
+                                        <button class="chart-period active" data-period="today">Today</button>
+                                        <button class="chart-period" data-period="week">Week</button>
+                                        <button class="chart-period" data-period="month">Month</button>
+                                    </div>
+                                </div>
+                                <div class="chart-content">
+                                    <canvas id="salesChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-container products-chart">
+                                <div class="chart-header">
+                                    <h3>Top Products</h3>
+                                    <div class="chart-subtitle">Best sellers this period</div>
+                                </div>
+                                <div class="chart-content">
+                                    <canvas id="productsChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
 
-                <div class="alerts-section">
-                    <h3>Stock Alerts</h3>
-                    <div id="stockAlerts" class="alerts-list">
-                        <!-- Low stock alerts will be loaded here -->
+                        <!-- Enhanced Analytics Section -->
+                        <div class="analytics-section">
+                            <div class="analytics-card">
+                                <h3>Inventory Alerts</h3>
+                                <div id="stockAlerts" class="alerts-list">
+                                    <!-- Real stock alerts will be loaded here -->
+                                </div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Performance Metrics</h3>
+                                <div class="metrics-list">
+                                    <div class="metric-item">
+                                        <span class="metric-label">Peak Hour:</span>
+                                        <span class="metric-value" id="peakHour">Loading...</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Best Product:</span>
+                                        <span class="metric-value" id="bestProduct">Loading...</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Customer Rating:</span>
+                                        <span class="metric-value" id="customerRating">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="quick-actions">
+                            <button class="action-btn export" id="exportData">
+                                [EXPORT] Export Data
+                            </button>
+                            <button class="action-btn refresh" id="refreshDashboard">
+                                [REFRESH] Refresh Data
+                            </button>
+                            <button class="action-btn settings" id="dashboardSettings">
+                                [SETTINGS] Dashboard Config
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Admin Toggle Button -->
-        <button id="adminToggle" class="admin-toggle-btn">📊</button>
+        <button id="adminToggle" class="admin-toggle-btn">[ADMIN]</button>
     </div>
 
     <!-- Product Variant Modal -->
