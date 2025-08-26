@@ -24,6 +24,11 @@ class CoffeePOS {
             products: null
         };
         
+        // Toast spam prevention
+        this.toastQueue = new Map(); // message -> last shown timestamp
+        this.maxToasts = 3; // Maximum concurrent toasts
+        this.toastCooldown = 2000; // 2 seconds between same messages
+        
         this.init();
     }
 
@@ -374,7 +379,8 @@ class CoffeePOS {
             console.log('[DEBUG] Auto-refresh disabled - only refreshes on page load');
             
             console.log('[DEBUG] System initialization complete!');
-            this.showToast('System ready!', 'success');
+            // Use less intrusive success notification
+            this.showImportantToast('Coffee POS System Ready!', 'success', 4000);
         } catch (error) {
             console.error('[DEBUG] Failed to load initial data:', error);
             console.error('[DEBUG] Error details:', error.message);
@@ -833,7 +839,8 @@ class CoffeePOS {
         
         const toastMessage = `${product.name} added to cart`;
         console.log('[DEBUG] addToCart() - Showing success toast:', toastMessage);
-        this.showToast(toastMessage, 'success');
+        // Use shorter duration and spam prevention for cart additions
+        this.showToast(toastMessage, 'success', 2000);
         
         console.log('[DEBUG] addToCart() - Playing add-to-cart sound');
         this.playSound('add-to-cart');
@@ -905,7 +912,7 @@ class CoffeePOS {
         
         this.renderCart();
         this.updateCartSummary();
-        this.showToast('Item removed from cart', 'info');
+        // Removed toast to prevent spam - user can see cart update visually
     }
 
     clearCart() {
@@ -921,8 +928,8 @@ class CoffeePOS {
         console.log('[DEBUG] clearCart() - Updating cart summary');
         this.updateCartSummary();
         
-        console.log('[DEBUG] clearCart() - Showing cart cleared toast');
-        this.showToast('Cart cleared', 'info');
+        console.log('[DEBUG] clearCart() - Cart cleared - no toast to prevent spam');
+        // User can see cart is visually empty - no need for toast
         
         console.log('[DEBUG] clearCart() - Function end');
     }
@@ -2128,9 +2135,32 @@ class CoffeePOS {
             return;
         }
         
+        // Anti-spam: Check if same message was shown recently
+        const now = Date.now();
+        const messageKey = `${message}_${type}`;
+        const lastShown = this.toastQueue.get(messageKey);
+        
+        if (lastShown && (now - lastShown) < this.toastCooldown) {
+            console.log('[DEBUG] showToast() - Message blocked due to spam prevention:', message);
+            return;
+        }
+        
+        // Limit concurrent toasts - remove oldest if at limit
+        const currentToasts = container.children;
+        if (currentToasts.length >= this.maxToasts) {
+            console.log('[DEBUG] showToast() - Removing oldest toast to prevent spam');
+            const oldestToast = currentToasts[0];
+            if (oldestToast) {
+                oldestToast.remove();
+            }
+        }
+        
+        // Update spam prevention map
+        this.toastQueue.set(messageKey, now);
+        
         console.log('[DEBUG] showToast() - Creating toast element');
         const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
+        toast.className = `toast ${type} slide-in`;
         
         const toastTitle = this.getToastTitle(type);
         console.log('[DEBUG] showToast() - Toast title:', toastTitle);
@@ -2146,14 +2176,18 @@ class CoffeePOS {
         console.log('[DEBUG] showToast() - Adding toast to container');
         container.appendChild(toast);
         
-        const currentToasts = container.children.length;
-        console.log(`[DEBUG] showToast() - Total toasts now: ${currentToasts}`);
+        // Position toast to not block interface
+        this.positionToast(toast);
         
+        const currentToastCount = container.children.length;
+        console.log(`[DEBUG] showToast() - Total toasts now: ${currentToastCount}`);
+        
+        // Auto-remove with slide-out animation
         console.log(`[DEBUG] showToast() - Setting auto-remove timer for ${duration}ms`);
         const autoRemoveTimer = setTimeout(() => {
             if (toast.parentNode) {
                 console.log('[DEBUG] showToast() - Auto-removing toast after timeout');
-                toast.remove();
+                this.removeToastWithAnimation(toast);
             }
         }, duration);
         
@@ -2163,15 +2197,76 @@ class CoffeePOS {
                 console.log('[DEBUG] showToast() - Manual close button clicked');
                 clearTimeout(autoRemoveTimer);
                 if (toast.parentNode) {
-                    toast.remove();
+                    this.removeToastWithAnimation(toast);
                 }
             });
             console.log('[DEBUG] showToast() - Close button listener added');
-        } else {
-            console.warn('[DEBUG] showToast() - Close button not found in toast');
         }
         
         console.log('[DEBUG] showToast() - Toast creation completed');
+    }
+    
+    positionToast(toast) {
+        // Position toasts to not block main interface
+        // Stack them vertically on the right side
+        const container = toast.parentNode;
+        const toastHeight = 80; // Approximate height
+        const index = Array.from(container.children).indexOf(toast);
+        const offset = index * (toastHeight + 10); // 10px gap
+        
+        toast.style.transform = `translateY(${offset}px)`;
+        toast.style.zIndex = 1000 + index;
+    }
+    
+    removeToastWithAnimation(toast) {
+        if (!toast.parentNode) return;
+        
+        console.log('[DEBUG] removeToastWithAnimation() - Starting removal animation');
+        toast.classList.add('slide-out');
+        
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+                // Reposition remaining toasts
+                this.repositionToasts();
+            }
+        }, 300); // Match CSS animation duration
+    }
+    
+    repositionToasts() {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        
+        Array.from(container.children).forEach((toast, index) => {
+            this.positionToast(toast);
+        });
+    }
+    
+    // Clear all toasts (useful for cleanup or when many errors occur)
+    clearAllToasts() {
+        console.log('[DEBUG] clearAllToasts() - Clearing all toasts');
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        
+        const toasts = Array.from(container.children);
+        toasts.forEach(toast => {
+            this.removeToastWithAnimation(toast);
+        });
+        
+        // Clear spam prevention map
+        this.toastQueue.clear();
+        console.log('[DEBUG] clearAllToasts() - All toasts cleared');
+    }
+    
+    // Show a single important toast, clearing others first
+    showImportantToast(message, type = 'info', duration = 5000) {
+        console.log('[DEBUG] showImportantToast() - Showing important toast:', message);
+        this.clearAllToasts();
+        
+        // Wait for clear animation to finish, then show important toast
+        setTimeout(() => {
+            this.showToast(message, type, duration);
+        }, 100);
     }
 
     getToastTitle(type) {
